@@ -53,17 +53,13 @@ class Token
 
     public function setValue($v) 
     {
-	assert(is_string($v) and $v != '');
 	$this->value = $v;
     }
 
     public function getValue() 
     {
 	$v = $this->value;
-       	if (is_string($v) and $v != '') {
-	    return $v;
-	}
-	return null;
+	return $v;
     }
 
     public function setPosition($p) 

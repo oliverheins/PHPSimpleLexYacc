@@ -15,7 +15,8 @@ class TokenRules extends LexerBuilder
 
     function t_SPACE($token) {
 	'/ +/';
-	$token->value = strlen($token->value);
+	$length = strlen($token->getValue());
+	$token->setValue($length);
 	return $token;
     }
 
@@ -154,6 +155,6 @@ $lexer->lex();
 
 $position = 0;
 while($token = $lexer->getToken($position)) {
-    echo $token->getType() . ":" . $token->getValue() . "<br>\n";
+    echo $token->getType() . ":" . $token->getValue() . ":" .$token->getPosition()."<br>\n";
     $position++;
 }
