@@ -6,7 +6,7 @@ class TokenGenerator extends MethodGenerator
 {
     protected $regexp;
 
-    protected $filehierarchy;
+    protected $classhierarchy;
     protected $linenumber;
 
     public function extractRegexp()
@@ -42,14 +42,14 @@ class TokenGenerator extends MethodGenerator
 	return $r;
     }
 
-    public function getFilehierarchy() 
+    public function getClasshierarchy() 
     {
 	$n = $this->filehierarchy;
 	assert(is_int($n));
 	return $n;
     }
 
-    public function setFilehierarchy($n)
+    public function setClasshierarchy($n)
     {
 	assert(is_int($n));
 	$this->filehierarchy = $n;
