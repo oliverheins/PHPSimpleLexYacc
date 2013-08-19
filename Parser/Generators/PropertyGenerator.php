@@ -12,7 +12,6 @@ class PropertyGenerator extends MemberGenerator
 	    case "name":
 	    case "reflection":
 	    case "docstring":
-	    case "abstract":
 	    case "static":
 	    case "public":
 	    case "protected":
@@ -62,13 +61,13 @@ class PropertyGenerator extends MemberGenerator
 
     public function setValue($value)
     {
-	assert(is_string($value));
+	assert(is_string($value) or $value === null);
 	$this->value = $value;
     }
 
     public function getValue()
     {
-	assert(is_string($value));
+	assert(is_string($this->value) or $this->value === null);
 	return $this->value;
     }
     
