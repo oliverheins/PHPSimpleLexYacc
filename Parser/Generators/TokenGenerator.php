@@ -9,6 +9,47 @@ class TokenGenerator extends MethodGenerator
     protected $classhierarchy;
     protected $linenumber;
 
+    public function __construct(array $parameters = array())
+    {
+	foreach ($parameters as $key => $value) {
+	    switch ($key) {
+	    case "name":
+	    case "body":
+	    case "source":
+	    case "parameters":
+	    case "reflection":
+	    case "docstring":
+	    case "visibility":
+	    case "public":
+	    case "private":
+	    case "protected":
+	    case "static":
+	    case "abstract":
+	    case "final":
+	    case "anonymous":
+	    case "classhierarchy":
+	    case "linenumber":
+	    case "regexp":
+		$f = 'set' . ucfirst($key);
+		$this->$f($value);
+		break;
+	    default:
+		throw new Exception("Method has no property " . $key);
+	    }
+	}
+    }
+
+    public static function compare(TokenGenerator $a, TokenGenerator $b)
+    {
+	if ($a->classhierarchy == $b->classhierarchy) {
+	    if ($a->linenumber == $b->linenumber) {
+		return 0;
+	    }
+	    return $a->linenumber < $b->linenumber ? -1 : 1;
+	}
+	return $a->classhierarchy < $b->classhierarchy ? -1 : 1;
+    }
+
     public function extractRegexp()
     {
 	$body = $this->getBody();
@@ -44,7 +85,7 @@ class TokenGenerator extends MethodGenerator
 
     public function getClasshierarchy() 
     {
-	$n = $this->filehierarchy;
+	$n = $this->classhierarchy;
 	assert(is_int($n));
 	return $n;
     }
@@ -52,7 +93,7 @@ class TokenGenerator extends MethodGenerator
     public function setClasshierarchy($n)
     {
 	assert(is_int($n));
-	$this->filehierarchy = $n;
+	$this->classhierarchy = $n;
 
     }
 
