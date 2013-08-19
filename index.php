@@ -1,6 +1,7 @@
 <?php
 
 include_once("Parser/LexerBuilder.php");
+//include_once("Parser/SimpleWikiLexer.php");
 
 class TokenRules extends LexerBuilder
 {
@@ -11,6 +12,7 @@ class TokenRules extends LexerBuilder
 			       'BAR', 'DQUOT', 'SQUOT', 'ASTERISK', 'EOF', 'STRING',
 	       		       'TABLEBEG', 'TABLEEND', 'NEWROW', 'EXCLAM'));
 	$this->setStates(array('table' => 'inclusive'));
+       	// $this->setIgnoreTokens("\t");
     }
 
     function t_SPACE($token) {
@@ -22,6 +24,7 @@ class TokenRules extends LexerBuilder
 
     function t_EOL($token) {
 	'/\v/';
+	$this->linenumber++;
 	return $token;
     }
 
@@ -35,10 +38,7 @@ class TokenRules extends LexerBuilder
 	return $this->concatToLastToken($token);
     }
 
-    function t_EQUAL($token) {
-	'/=/';
-	return $token;
-    }
+    var $t_EQUAL = "/=/";
 
     function t_CURLYBEG($token) {
 	'/\{\{/';
@@ -147,7 +147,9 @@ class TokenRules extends LexerBuilder
 
 $r = new TokenRules();
 $lexer = $r->getLexer("SimpleWikiLexer");
-unset($r);
+//unset($r);
+
+//$lexer = new SimpleWikiLexer();
 
 $data = file_get_contents('test.txt');
 $lexer->setData($data);
@@ -155,6 +157,7 @@ $lexer->lex();
 
 $position = 0;
 while($token = $lexer->getToken($position)) {
-    echo $token->getType() . ":" . $token->getValue() . ":" .$token->getPosition()."<br>\n";
+    echo $token->getType() . ":" . $token->getValue() . ": pos " .$token->getPosition().", line ". $token->getLinenumber()."<br>\n";
     $position++;
 }
+
