@@ -68,7 +68,7 @@ class Token
 	$this->position = $p;
     }
 
-    public function getPosition($p) 
+    public function getPosition() 
     {
 	$p = $this->position;
 	assert(is_int($p) and $p >= 0);
