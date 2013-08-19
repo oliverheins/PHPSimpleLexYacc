@@ -9,7 +9,8 @@ abstract class AbstractLexer
     protected $currentstate;
     protected $data;
     protected $rulelist;
-    protected $linenumber;
+    protected $linenumber = 1;
+    protected $ignoreFunction;
 
     public function __construct()
     {
@@ -34,6 +35,10 @@ abstract class AbstractLexer
 
     protected function lex_(&$string, &$position)
     {
+	if ($this->ignoreFunction->__invoke($string[0])) {
+	    $string = substr($string, 1);
+	    return;
+	}
 	foreach ($this->rulelist[$this->getCurrentState()] as $rule => $a) {
 	    $f = $a['function'];
 	    $type = $a['type'];
