@@ -27,7 +27,7 @@ abstract class CodeGenerator
 	return $this->reflection;
     }
 
-    public function setReflection(ReflectionFunctionAbstract $reflection)
+    public function setReflection(Reflector $reflection)
     {
 	$this->reflection = $reflection;
     }
