@@ -589,7 +589,7 @@ abstract class LexerBuilder
      *
      * They are compared to a string named $c
      *
-     * return string   The or-expression
+     * return string   The or-expression, if there are any ignore tokens or 'false'
      * @see LexerBuilder::$ignoreTokens
      */
     private function getIgnoreString()
