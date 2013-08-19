@@ -6,7 +6,7 @@
  * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
  */
 
-include_once("Generators/TokensBase.php");
+include_once("TokensBase.php");
 include_once("Generators/MethodGenerator.php");
 include_once("Generators/TokenGenerator.php");
 include_once("Generators/ClassGenerator.php");
@@ -26,6 +26,15 @@ abstract class LexerBuilder
      */
     private $tokens = array();
 
+    /** List of properties
+     *
+     * Holds all the properties of the lexer definition that don't
+     * define any token
+     *
+     * @type array
+     */
+    private $properties = array();
+
     /** List of token related methods
      *
      * Holds all the methods of the lexer definition that are related
@@ -44,6 +53,12 @@ abstract class LexerBuilder
      */
     private $extraMethods = array();
 
+    /** List of tokens that can be ignored totally
+     *
+     * @type array
+     */
+    private $ignoreTokens = array();
+
     /** List of all states
      *
      * Stores all states and their mode (inclusive/exclusive) as key
@@ -61,6 +76,17 @@ abstract class LexerBuilder
      * @type array
      */
     private $inclusivestates = array();
+
+    /** Table of class hierarchy
+     *
+     * Maps a filename to the class hierarchy: 
+     * child -> parent =~ 1 -> 2
+     *
+     * @type array
+     * @see LexerBuilder::addClasshierarchy()
+     * @see LexerBuilder::getClasshierarchy()
+     */
+    private $classhierarchy = array();
 
     /** Constructor
      *
@@ -121,7 +147,8 @@ abstract class LexerBuilder
     /** Returns the generated Lexer
      *
      * Checks if the lexer definition was changed recently. If so, it
-     * generates a new one before returning the lexer.
+     * generates a new one before returning the lexer.  Also builds
+     * the class hierarchy.
      *
      * @access public
      * @param  string $lexername  The name of the lexer (must be a valid classname)
@@ -139,16 +166,19 @@ abstract class LexerBuilder
 	$usecache = false;
 	if (@file_exists($lexerfile)) {
 	    $object = new ReflectionObject($this);
-	    $classfile = $object->getFileName();
+	    $classlevel = 1;
 	    $newestfiletime = 0;
 	    while (true) { // traverse all parents of the lexer
 			   // definition and get the latest
 			   // modification time
+		$classfile = $object->getFileName();
+		$classname = $object->getName(); // Build class hierarchy
+		$this->addClasshierarchy($classname, $classlevel);
+		$classlevel++;
 		$filetime = @filemtime($classfile);
 		$newestfiletime = $filetime > $newestfiletime ? $filetime : $newestfiletime;
 		if ($ancestor = $object->getParentClass()) {
 		    $object = $ancestor;
-		    $classfile = $object->getFileName();
 		} else {
 		    break;
 		}
@@ -173,14 +203,14 @@ abstract class LexerBuilder
     /** Builds a new lexer
      *
      * Called by getLexer().  Extracts the code, then builds a new
-     * lexer class file.  Uses the information from $tokenMethods to
-     * build up the rulelist.
+     * lexer class file.  Uses the information from
+     * LexerBuilder::$tokenMethods to build up the rulelist.
      *
      * @access private
      * @param  string $lexername    The name of the lexer (must be a valid classname).
-     * @see    Lexer::extractCode() for the actual parsing of the lexer definition.
-     * @see    Lexer::$tokenMethods for the stored lexing methods.
-     * @see    Lexer::$extraMethods for the rest of the methods.
+     * @see    LexerBuilder::extractCode() for the actual parsing of the lexer definition.
+     * @see    LexerBuilder::$tokenMethods for the stored lexing methods.
+     * @see    LexerBuilder::$extraMethods for the rest of the methods.
      * @return string $lexer        The code of the created lexer.
      */
     private function createLexer($lexername)
@@ -194,6 +224,10 @@ abstract class LexerBuilder
 	$class = new ClassGenerator(array('name' => $lexername,
 					  'extension' => 'AbstractLexer'));
 
+	foreach ($this->properties as $prop) {
+	    $class->addProperty($prop);
+	}
+
 	$constructcode = 'parent::__construct();' . "\n";
 
 	// Generates the $states array;
@@ -205,6 +239,9 @@ abstract class LexerBuilder
 	$code = 'array(' . $code . ')'; 
 
 	$constructcode .= '$this->statelist = ' . $code . ';' . "\n";
+
+	$code = 'function($c) { return ' . $this->getIgnoreString() . '; }';
+	$constructcode .= '$this->ignoreFunction = ' . $code . ';' . "\n";
 
 	// Generates the rulelist
 	$cc = array(); // outer code array
@@ -252,11 +289,14 @@ abstract class LexerBuilder
     /** Parses the lexer definition
      *
      * and extracts the relevant code portions.  Builds up
-     * $tokenMethods and $extraMethods.
+     * LexerBuilder::$tokenMethods and LexerBuilder::$extraMethods.
+     * Uses LexerBuilder::$classhierarchy to sort
+     * LexerBuilder::$tokenMethods.
      *
      * @access private
-     * @see    Lexer::$tokenMethods for the stored lexing methods.
-     * @see    Lexer::$extraMethods for the rest of the methods.
+     * @see    LexerBuilder::$classhierarchy for the class hierarchy
+     * @see    LexerBuilder::$tokenMethods   for the stored lexing methods.
+     * @see    LexerBuilder::$extraMethods   for the rest of the methods.
      */
     private function extractCode() 
     {
@@ -290,6 +330,7 @@ abstract class LexerBuilder
 
 	foreach ($objectMethods as $method) {
 	    $methodName = $method->getName();
+	    //	    echo "Methode " . $methodName ."<br>";
 	    if ($parent->hasMethod($methodName)) { 
 		// we are only interested in methods of the child
 		// classes
@@ -322,12 +363,17 @@ abstract class LexerBuilder
 		});
 	    $methodSource = implode("\n", $methodSource);
 
+	    $classname = $method->getDeclaringClass()->getName();
+	    $classhierarchy = $this->getLevelForClass($classname);
+
 	    if ($found === true) {
-		$m = new TokenGenerator(array('name' => $methodName,
-					      'source' => $methodSource,
-					      'parameters' => $method->getParameters(),
-					      'reflection' => $method,
-					      'docstring' => $method->getDocComment()));
+		$m = new TokenGenerator(array('name'           => $methodName,
+					      'source'         => $methodSource,
+					      'parameters'     => $method->getParameters(),
+					      'reflection'     => $method,
+					      'docstring'      => $method->getDocComment(),
+					      'classhierarchy' => $classhierarchy,
+					      'linenumber'     => $startLine));
 		$m->extractBody();
 		$m->extractRegexp();
 		$this->tokenMethods[$state][$methodName] = $m;
@@ -335,6 +381,10 @@ abstract class LexerBuilder
 		    // if state is initial, include this rule to all
 		    // inclusive states.
 		    foreach ($this->inclusivestates as $istate) {
+			if (! array_key_exists($istate, $this->tokenMethods)) {
+			    // Init the $istate table
+			    $this->tokenMethods[$istate] = array();
+			}
 			$extMethodName = 't_' . $istate . '_' . $tokenname;
 			if (! array_key_exists($extMethodName, $this->tokenMethods[$istate])) {
 			    // check if there already an existing rule
@@ -354,9 +404,204 @@ abstract class LexerBuilder
 	    }
 	}
 
+	$objectProperties = $object->getProperties();
+	$defaultProperties = $object->getDefaultProperties();
+
+	$reflection = new ReflectionClass($this);
+	$templateMethod = $reflection->getMethod('tokenMethodTemplate');
+
+	foreach ($objectProperties as $prop) {
+	    $propName = $prop->getName();
+	    if ($parent->hasProperty($prop)) {
+		continue;
+	    }
+	    $propValue = isset($defaultProperties[$propName]) ? $defaultProperties[$propName] : null;
+
+	    $className = $prop->getDeclaringClass()->getName();
+	    $classhierarchy = $this->getLevelForClass($className);
+	    $classFile = new SplFileObject($prop->getDeclaringClass()->getFileName());
+
+	    foreach ($classFile as $line => $content) {
+		if (preg_match('/(private|protected|public|var)\s\$'.$propName.'/x', $content)) {
+		    $startLine = $line + 1;
+		    preg_match('/(private|protected|public|var)\s\$'.$propName.'\s*=\s*((?:\'.+\')|(?:".+"))\s*;/x', $content, $matches);
+		    if (isset($matches[2])) {
+			$propValue = $matches[2];
+		    }
+		    break;
+		}
+	    }
+
+	    $found = false;
+	    if (preg_match('/t_(?:([a-zA-Z]+)_)?([a-zA-Z]+)/', $propName, $matches)) {
+		$state = $matches[1];
+		if ($state == '') $state = self::INITIAL;
+		$tokenname = $matches[2];
+		if (array_search($tokenname, $this->tokens)) {
+		    $tokens[$tokenname] = true;
+		    $found = true;
+		    $m = new TokenGenerator(array('name'           => $propName,
+						  'body'           => 'return $token;',
+						  'regexp'         => $propValue,
+						  'parameters'     => $templateMethod->getParameters(),
+						  'reflection'     => $templateMethod,
+						  'docstring'      => $templateMethod->getDocComment(),
+						  'classhierarchy' => $classhierarchy,
+						  'linenumber'     => $startLine));
+		    //		    $m->extractBody();
+		    $this->tokenMethods[$state][$propName] = $m;
+		    if ($state == self::INITIAL) {
+			// if state is initial, include this rule to all
+			// inclusive states.
+			foreach ($this->inclusivestates as $istate) {
+			    if (! array_key_exists($istate, $this->tokenMethods)) {
+				// Init the $istate table
+				$this->tokenMethods[$istate] = array();
+			    }
+			    $extMethodName = 't_' . $istate . '_' . $tokenname;
+			    if (! array_key_exists($extMethodName, $this->tokenMethods[$istate])) {
+				// check if there already an existing rule
+				// for this state
+				$this->tokenMethods[$istate][$extMethodName] = $m;
+			    }
+			}
+		    }
+		}
+	    }
+
+	    if ($found === false) {
+		$this->properties[] = new PropertyGenerator(array('name' => $propName,
+								  'reflection' => $prop,
+								  'docstring' => $prop->getDocComment(),
+								  'static' => $prop->isStatic(),
+								  'public' => $prop->isPublic(),
+								  'protected' => $prop->isProtected(),
+								  'private' => $prop->isPrivate(),
+								  'value' => $propValue));
+	    }
+
+	}
+
 	if (count($tokens) != count($this->getTokens())) {
 	    throw new Exception("Token not defined");
 	}
+
+
+	foreach($this->tokenMethods as $key => $val) {
+	    uasort($this->tokenMethods[$key], array("TokenGenerator", "compare"));
+	}
     }
 
+    /** Returns a given Token
+     *
+     * This is the template function for simple tokens, which do not
+     * change the default status of the token.
+     *
+     * @param  Token $token  The token to (not) manipulate
+     * @return Token
+     */
+    private function tokenMethodTemplate($token)
+    {
+	return $token;
+    }
+
+    /** Adds a class to the class hierarchy
+     * 
+     * An integer value correspending to the nesting level is added.
+     *
+     * @param string $classname  The name of the class
+     * @param int    $n          The nesting level
+     * @see LexerBuilder::$classhierarchy
+     */
+    private function addClasshierarchy($classname, $n)
+    {
+	assert(is_string($classname));
+	assert($classname != '');
+	assert(is_int($n));
+	assert($n >= 1);
+	$this->classhierarchy[$classname] = $n;
+    }
+
+    /** Returns the whole class hierarchy table
+     *
+     * @return array
+     * @see LexerBuilder::$classhierarchy
+     */
+    private function getClasshierarchy()
+    {
+	$c = $this->classhierarchy;
+	assert(is_array($c));
+	return $c;
+    }
+
+    /** Returns the level of a class in the class hierarchy
+     *
+     * @param  string $classname  The name of the class
+     * @return int    The level of the class in the class hierarchy 
+     * @return false  if class is not in the hierarchy
+     */
+    private function getLevelForClass($classname)
+    {
+	assert(is_string($classname));
+	if (isset($this->classhierarchy[$classname])) { 
+	    return $this->classhierarchy[$classname];
+	}
+	return false;
+    }
+
+    /** Returns the list of Tokens that can be fully ignored
+     *
+     * @return array 
+     * @see LexerBuilder::$ignoreTokens
+     */
+    protected function getIgnoreTokens()
+    {
+	return $this->ignoreTokens;
+    }
+
+    /** Sets the list of tokens that can be fully ignored
+     *
+     * @param string $tokens  A string of chars that can be ignored
+     * @see LexerBuilder::$ignoreTokens
+     */
+    protected function setIgnoreTokens($tokens)
+    {
+	assert(is_string($tokens));
+	$this->ignoreTokens = array();
+	$this->addIgnoreTokens($tokens);
+    }
+
+    /** Adds to the list of tokens that can be fully ignored
+     *
+     * @param string $tokens  A string of chars that can be ignored
+     * @see LexerBuilder::$ignoreTokens
+     */
+    protected function addIgnoreTokens($tokens)
+    {
+	assert(is_string($tokens));
+	$length = strlen($tokens);
+	for ($i = 0; $i < $length; $i++) {
+	    $this->ignoreTokens[] = $tokens[$i];
+	}
+    }
+
+    /** Returns a string concatenating all ignore tokens to an or expression
+     *
+     * They are compared to a string named $c
+     *
+     * return string   The or-expression
+     * @see LexerBuilder::$ignoreTokens
+     */
+    private function getIgnoreString()
+    {
+	$ignoreTokens = array();
+	foreach ($this->ignoreTokens as $t) {
+	    $ignoreTokens[] = $t == '"' ? "'\"'" : '"' . $t . '"';
+	}
+	if (count($ignoreTokens) > 0) {
+	    return '$c == ' . implode(' or $c == ', $ignoreTokens);
+	} else {
+	    return 'false';
+	}
+    }
 }
