@@ -1,5 +1,8 @@
 <?php
 
+include_once("ParserRule.php");
+include_once("ParserState.php");
+
 class AbstractParser
 {
 
@@ -10,6 +13,22 @@ class AbstractParser
 //     theset[index] = [elt] + theset[index]
 //     return True
 //   return False
+
+    private $grammar;
+
+    public function __construct(array $grammar)
+    {
+	$this->setGrammar($grammar);
+    }
+
+    protected function setGrammar(array $grammar)
+    {
+	assert(count($grammar) > 0);
+	foreach ($grammar as $rule) {
+	    assert($rule instanceof ParserRule);
+	}
+	$this->grammar = $grammar;
+    }
 
     protected function addToSet($set, $index, $elt) 
     {
@@ -23,71 +42,35 @@ class AbstractParser
 	return False;
     }
 
-    private function closure($grammar, $i, $x, $ab, $cd)
-    {
-	// $x->$ab.$cd
-	$next_states = array_map(function($rule) use ($i) { 
-		return array($rule[0], [], $rule[1], $i); 
-	    }, 
-	    array_values(array_filter($grammar, function($rule) use ($cd) { 
-			return count($cd) > 0 and $rule[0] == $cd[0]; 
-		    }
-		    )));
-	return $next_states;
-    }
-
-    private function shift ($tokens, $i, $x, $ab, $cd, $j) 
-    {
-	// x->ab.cd from j tokens[i]==c?
-	if (count($cd) > 0 and $tokens[$i] == $cd[0]) {
-	    return array($x, array_merge($ab, array($cd[0])), array_slice($cd, 1), $j);
-	} else {
-	    return Null;
-	}
-    }
-
-    private function reductions($chart, $i, $x, $ab, $cd, $j)
-    {
-	// ab. from j
-	// chart[j] has y->... .x ....from k
-	return array_map(function($jstate) use ($x) {
-		return array($jstate[0], array_merge($jstate[1], array($x)), array_slice($jstate[2], 1), $jstate[3]);
-	    },
-	    array_values(array_filter($chart[$j], function($jstate) use ($cd, $x) {
-			return count($cd) == 0 and count($jstate[2]) > 0 and $jstate[2][0] == $x;
-		    }
-		    )));
-    }
-
-    public function parse($tokens, $grammar)
+    public function parse(array $tokens)
     {
 	$work_count = 0;
-	$tokens[] = "end_of_input_marker";
+	$tokens[] = "end_of_input_marker"; // TODO
 	$chart = array();
-	$start_rule = $grammar[0];
+	$start_rule = $this->grammar[0];
+	// Create chart as list of empty lists, length = no of tokens
 	for ($i = 0; $i >= count($tokens); $i++) {
 	    $chart[$i] = array();
 	}
-	$start_state = array($start_rule[0], [], $start_rule[1], 0);
-	$chart[0] = $start_state;
+	// $start_state: StartSymbol -> [] . [StartRule] from 0
+	$start_state = new ParserState($start_rule->getSymbol(), [], $start_rule->getRule(), 0);
+	// Add $start_state to the chart
+	$chart[0] = array($start_state);
 	for ($i = 0; $i < count($tokens); $i++) {
+	  $z = 0;
 	    while (True) {
-		$changes = False;
+		$z++; // WORKAROUND
+		if ($z >= 1000) break; // WORKAROUND
+		$changes = false;
 		foreach ($chart[$i] as $state) {
-		    // State ===   x -> a b . c d , j
-		    $x = $state[0];
-		    $ab = $state[1];
-		    $cd = $state[2];
-		    $j = $state[3];
-
-		    // Current State ==   x -> a b . c d , j
+		    // Current State ==   x -> ab . cd from j
 		    // Option 1: For each grammar rule c -> p q r
 		    // (where the c's match)
 		    // make a next state               c -> . p q r , i
 		    // English: We're about to start parsing a "c", but
 		    //  "c" may be something like "exp" with its own
 		    //  production rules. We'll bring those production rules in.
-		    $next_states = $this->closure($grammar, $i, $x, $ab, $cd);
+		    $next_states = $state->closure($this->grammar, $i);
 		    foreach ($next_states as $next_state) {
 			$changes = $this->addToSet($chart, $i, $next_state) || $changes;
 		    }
@@ -99,7 +82,7 @@ class AbstractParser
 		    // English: We're looking for to parse token c next
 		    //  and the current token is exactly c! Aren't we lucky!
 		    //  So we can parse over it and move to j+1.
-		    $next_state = $this->shift($tokens, $i, $x, $ab, $cd, $j);
+		    $next_state = $state->shift($tokens, $i);
 		    if ($next_state != Null) {
 			$changes = $this->addToSet($chart, $i+1, $next_state) || $changes;
 		    }
@@ -112,18 +95,36 @@ class AbstractParser
 		    // English: We just finished parsing an "x" with this token,
 		    //  but that may have been a sub-step (like matching "exp -> 2"
 		    //  in "2+3"). We should update the higher-level rules as well.
-		    $next_states = $this->reductions($chart, $i, $x, $ab, $cd, $j);
+		    $next_states = $state->reductions($chart, $i);
 		    foreach ($next_states as $next_state) {
 			$changes = $this->addToSet($chart, $i, $next_state) || $changes;
 
 		    }
 		    // We're done if nothing changed!
 		}
-		if ($changes == False) {
+		if ($changes == false) {
 		    break;
 		}
-
 	    }
+
+//	    for ($i = 0; $i < count($tokens); $i++) {
+//		echo "== chart " . $i . "<br>\n";
+//		foreach ($chart[$i] as $state) {
+//		    $x  = $state->getX();
+//		    $ab = $state->getAb();
+//		    $cd = $state->getCd();
+//		    $j  = $state->getJ();
+//		    echo "&nbsp;&nbsp;&nbsp;&nbsp;" . $x . " -> ";
+//		    foreach ($ab as $sym) {
+//			echo $sym . " ";
+//		    }
+//		    echo ". ";
+//		    foreach ($cd as $sym) {
+//			echo $sym . " ";
+//		    }
+//		    echo "from " . $j . "<br>\n";
+//		}
+//	    }
 	}
     }
 
@@ -241,15 +242,31 @@ class AbstractParser
 
 }
 
-$test = new AbstractParser();
-$grammar = [ 
-    ["exp", ["exp", "+", "exp"]],
-    ["exp", ["exp", "-", "exp"]],
-    ["exp", ["(", "exp", ")"]],
-    ["exp", ["num"]],
-    ["t",["I","like","t"]],
-    ["t",[""]]
-	     ];
+//$grammar = [ 
+//    ["exp", ["exp", "+", "exp"]],
+//    ["exp", ["exp", "-", "exp"]],
+//    ["exp", ["(", "exp", ")"]],
+//    ["exp", ["num"]],
+//    ["t",["I","like","t"]],
+//    ["t",[""]]
+//];
+
+//$accepting_state = [$start_rule[0], $start_rule[1], [], 0]
+// accepting_state = (start_rule[0], start_rule[1], [], 0)
+//   return accepting_state in chart[len(tokens)-1]
+//
+$grammar = [
+	    new ParserRule("S", ["P" ]),
+	    new ParserRule("P", ["(" , "P", ")" ]),
+	    new ParserRule("P", [ ]),
+	    ];
+$tokens = [ "(", "(", ")", ")"];
+$test = new AbstractParser($grammar);
+$result=$test->parse($tokens);
+//echo $result;
+
+
+echo "Jupp!";
 
 //$chart = [[['exp', ['exp'], ['+', 'exp'], 0], ['exp', [], ['num'], 0], ['exp', [], ['[', 'exp', ']'], 0], ['exp', [], ['exp', '-', 'exp'], 0], ['exp', [], ['exp', '+', 'exp'], 0]], [['exp', ['exp', '+'], ['exp'], 0]], [['exp', ['exp', '+', 'exp'], [], 0]]];
 //
