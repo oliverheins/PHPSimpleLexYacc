@@ -45,7 +45,7 @@ class ParserState
     
     public function getAb()
     {
-	return $ab;
+	return $this->ab;
     }
 
     public function setCd(array $cd)
@@ -103,7 +103,7 @@ class ParserState
 	// x->ab.cd
 	$next_states = array_map(function($rule) use ($i) {
 		assert($rule instanceof ParserRule);
-		return array(new ParserState($rule->getSymbol(), [], $rule->getRule(), $i)); 
+		return new ParserState($rule->getSymbol(), [], $rule->getRule(), $i); 
 	    }, 
 	    array_values(array_filter($grammar, function($rule) use ($cd) { 
 			return count($cd) > 0 and $rule->getSymbol() == $cd[0]; 
@@ -121,7 +121,10 @@ class ParserState
 	$cd = $this->getCd();
 	$j = $this->getJ();
 	if (count($cd) > 0 and $tokens[$i] == $cd[0]) {
-	    return new ParserState($x, array_merge($ab, array($cd[0])), array_slice($cd, 1), $j);
+	    return new ParserState($x, 
+				   array_merge($ab, array($cd[0])), 
+				   array_slice($cd, 1), 
+				   $j);
 	} else {
 	    return Null;
 	}
@@ -133,11 +136,13 @@ class ParserState
 	// ab. from j
 	// chart[j] has y->... .x ....from k
 	$x = $this->getX();
-	$ab = $this->getAb();
 	$cd = $this->getCd();
 	$j = $this->getJ();
 	return array_map(function($jstate) use ($x) {
-		return array($jstate->getX(), array_merge($jstate->getAb(), array($x)), array_slice($jstate->getCd(), 1), $jstate->getJ());
+		return new ParserState($jstate->getX(), 
+				       array_merge($jstate->getAb(), array($x)), 
+				       array_slice($jstate->getCd(), 1), 
+				       $jstate->getJ());
 	    },
 	    array_values(array_filter($chart[$j], function($jstate) use ($cd, $x) {
 			return count($cd) == 0 and count($jstate->getCd()) > 0 and $jstate->getCd()[0] == $x;
