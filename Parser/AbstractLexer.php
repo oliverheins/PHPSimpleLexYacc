@@ -88,6 +88,13 @@ abstract class AbstractLexer
 	return null;
     }
 
+    public function getTokens()
+    {
+	$tokenlist = $this->tokenlist;
+	assert(is_array($tokenlist));
+	return $tokenlist;
+    }
+
     protected function setStatelist(array $statelist)
     {
 	foreach ($statelist as $state) {
