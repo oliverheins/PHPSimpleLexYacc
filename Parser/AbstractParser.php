@@ -131,14 +131,14 @@ class AbstractParser
 //    ["t",[""]]
 //];
 
-$grammar = [
-	    new ParserRule("S", ["P" ]),
-	    new ParserRule("P", ["(" , "P", ")" ]),
-	    new ParserRule("P", [ ]),
-	    ];
-$tokens = [ "(", "(", ")", ")"];
-$test = new AbstractParser($grammar);
-$result=$test->parse($tokens);
+//$grammar = [
+//	    new ParserRule("S", ["P" ]),
+//	    new ParserRule("P", ["(" , "P", ")" ]),
+//	    new ParserRule("P", [ ]),
+//	    ];
+//$tokens = [ "(", "(", ")", ")"];
+//$test = new AbstractParser($grammar);
+//$result=$test->parse($tokens);
 //echo $result;
 
 //$chart = [[['exp', ['exp'], ['+', 'exp'], 0], ['exp', [], ['num'], 0], ['exp', [], ['[', 'exp', ']'], 0], ['exp', [], ['exp', '-', 'exp'], 0], ['exp', [], ['exp', '+', 'exp'], 0]], [['exp', ['exp', '+'], ['exp'], 0]], [['exp', ['exp', '+', 'exp'], [], 0]]];
