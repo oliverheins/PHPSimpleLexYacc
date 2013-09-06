@@ -112,3 +112,5 @@ Simple PHP Parser Generator is a minimal implemantation of the Lex/Yacc parser t
             . $token->getPosition().", line ". $token->getLinenumber()."<br>\n";
         $position++;
     }
+
+#### Explanation
