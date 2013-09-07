@@ -12,7 +12,7 @@ class ParserState
 
     public function __construct($x, array $ab, array $cd, $j)
     {
-	assert(is_string($x));
+	assert($x instanceof ParserToken);
 	assert(is_array($ab));
 	assert(is_array($cd));
 	assert(is_int($j));
@@ -24,21 +24,21 @@ class ParserState
 
     public function setX($x)
     {
-	assert(is_string($x));
+	assert($x instanceof ParserToken);
 	$this->x = $x;
     }
     
     public function getX()
     {
 	$x = $this->x;
-	assert(is_string($x));
+	assert($x instanceof ParserToken);
 	return $x;
     }
 
     public function setAb(array $ab)
     {
 	foreach ($ab as $sym) {
-	    assert(is_string($sym));
+	    assert($sym instanceof ParserToken);
 	}
 	$this->ab = $ab;
     }
@@ -51,7 +51,7 @@ class ParserState
     public function setCd(array $cd)
     {
 	foreach ($cd as $sym) {
-	    assert(is_string($sym));
+	    assert($sym instanceof ParserToken);
 	}
 	$this->cd = $cd;
     }
@@ -115,12 +115,13 @@ class ParserState
     public function shift (array $tokens, $i) 
     {
 	assert(is_int($i));
+	assert($tokens[$i] instanceof Token);
 	// x->ab.cd from j tokens[i]==c?
 	$x = $this->getX();
 	$ab = $this->getAb();
 	$cd = $this->getCd();
 	$j = $this->getJ();
-	if (count($cd) > 0 and $tokens[$i] == $cd[0]) {
+	if (count($cd) > 0 and $cd[0]->compare($tokens[$i])) {
 	    return new ParserState($x, 
 				   array_merge($ab, array($cd[0])), 
 				   array_slice($cd, 1), 

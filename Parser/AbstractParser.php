@@ -107,13 +107,13 @@ class AbstractParser
 		    $ab = $state->getAb();
 		    $cd = $state->getCd();
 		    $j  = $state->getJ();
-		    echo "&nbsp;&nbsp;&nbsp;&nbsp;" . $x . " -> ";
+		    echo "&nbsp;&nbsp;&nbsp;&nbsp;" . $x->getType() . " -> ";
 		    foreach ($ab as $sym) {
-			echo $sym . " ";
+			echo $sym->getType() . " ";
 		    }
 		    echo ". ";
 		    foreach ($cd as $sym) {
-			echo $sym . " ";
+			echo $sym->getType() . " ";
 		    }
 		    echo "from " . $j . "<br>\n";
 		}
