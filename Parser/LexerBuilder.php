@@ -482,9 +482,9 @@ abstract class LexerBuilder
 
 	}
 
-	if (count($tokens) != count($this->getTokens())) {
-	    throw new Exception("Token not defined");
-	}
+//	if (count($tokens) != count($this->getTokens())) {
+//	    throw new Exception("Token not defined");
+//	}
 
 
 	foreach($this->tokenMethods as $key => $val) {
