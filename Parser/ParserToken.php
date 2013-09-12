@@ -6,6 +6,7 @@ class ParserToken
 {
     private $type = Null;
     private $value = Null;
+    private $reduction = Null;
 
     public function __construct(array $args = array()) 
     {
@@ -13,6 +14,7 @@ class ParserToken
 	    switch ($key) {
 	    case "type":
 	    case "value":
+	    case "reduction":
 		$this->$key = $value;
 	        break;
 	      
@@ -31,8 +33,40 @@ class ParserToken
 	return true;
     }
 
+    public function equal(ParserToken $token)
+    {
+	return $this->type == $token->getType();
+    }
+
     public function getType()
     {
 	return $this->type;
+    }
+
+    public function getReduction()
+    {
+	return is_callable($this->reduction) ? $this->reduction : null;
+    }
+
+    public function getValue()
+    {
+	if (! $this->value) return null;
+	return $this->value;
+    }
+
+    public function setValue($value)
+    {
+	$this->value = $value;
+    }
+
+    public function __toString()
+    {
+	return $this->getType() . " (" . $this->value . ")";
+    }
+
+    public function __clone()
+    {
+	if (is_object($this->value)) $this->value = clone $this->value;
+	if (is_object($this->type))  $this->type  = clone $this->type;
     }
 }

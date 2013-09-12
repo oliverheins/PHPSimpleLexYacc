@@ -2,12 +2,14 @@
 
 include_once("ParserRule.php");
 include_once("ParserState.php");
+include_once("ParserChart.php");
+
 
 class AbstractParser
 {
 
     private $grammar;
-    private $chart = array();
+    private $chart;
 
     public function __construct(array $grammar)
     {
@@ -23,17 +25,6 @@ class AbstractParser
 	$this->grammar = $grammar;
     }
 
-    protected function addToChart($index, $elt) 
-    {
-	if (!array_key_exists($index, $this->chart)) {
-	    $this->chart[$index] = array();
-	}
-	if (!in_array($elt, $this->chart[$index])) {
-	    array_unshift($this->chart[$index], $elt);
-	    return True;
-	}
-	return False;
-    }
 
     public function parse(array $tokens)
     {
@@ -41,20 +32,18 @@ class AbstractParser
 	$tokens[] = "end_of_input_marker"; // TODO
 	$start_rule = $this->grammar[0];
 	// Create chart as list of empty lists, length = no of tokens
-	for ($i = 0; $i <= count($tokens); $i++) {
-	    $this->chart[$i] = array();
-	}
+	$this->chart = new ParserChart(count($tokens));
 	// $start_state: StartSymbol -> [] . [StartRule] from 0
 	$start_state = new ParserState($start_rule->getSymbol(), [], $start_rule->getRule(), 0);
 	// Add $start_state to the chart
-	$this->chart[0] = array($start_state);
+	$this->chart->set(0, $start_state);
 	for ($i = 0; $i < count($tokens); $i++) {
 	  $z = 0;
 	    while (True) {
 		$z++; // WORKAROUND
-		if ($z >= 1000) break; // WORKAROUND
+		if ($z >= 100) break; // WORKAROUND
 		$changes = false;
-		foreach ($this->chart[$i] as $state) {
+		foreach ($this->chart->get($i) as $state) {
 		    assert ($state instanceof ParserState);
 		    // Current State ==   x -> ab . cd from j
 		    // Option 1: For each grammar rule c -> p q r
@@ -65,9 +54,8 @@ class AbstractParser
 		    //  production rules. We'll bring those production rules in.
 		    $next_states = $state->closure($this->grammar, $i);
 		    foreach ($next_states as $next_state) {
-			$changes = $this->addToChart($i, $next_state) || $changes;
+			$changes = $this->chart->add($i, $next_state) || $changes;
 		    }
-		   
 		    // Current State ==   x -> a b . c d , j
 		    // Option 2: If tokens[i] == c,
 		    // make a next state               x -> a b c . d , j
@@ -77,7 +65,7 @@ class AbstractParser
 		    //  So we can parse over it and move to j+1.
 		    $next_state = $state->shift($tokens, $i);
 		    if ($next_state != Null) {
-			$changes = $this->addToChart($i+1, $next_state) || $changes;
+			$changes = $this->chart->add($i+1, $next_state) || $changes;
 		    }
 
 		    // Current State ==   x -> a b . c d , j
@@ -88,9 +76,9 @@ class AbstractParser
 		    // English: We just finished parsing an "x" with this token,
 		    //  but that may have been a sub-step (like matching "exp -> 2"
 		    //  in "2+3"). We should update the higher-level rules as well.
-		    $next_states = $state->reductions($this->chart, $i);
+		    $next_states = $state->reductions($this->chart->get(-1), $i);
 		    foreach ($next_states as $next_state) {
-			$changes = $this->addToChart($i, $next_state) || $changes;
+			$changes = $this->chart->add($i, $next_state) || $changes;
 
 		    }
 		    // We're done if nothing changed!
@@ -102,22 +90,24 @@ class AbstractParser
 
 	    for ($zz = 0; $zz < count($tokens); $zz++) {
 		echo "== chart " . $zz . "<br>\n";
-		foreach ($this->chart[$zz] as $state) {
+		foreach ($this->chart->get($zz) as $state) {
 		    $x  = $state->getX();
 		    $ab = $state->getAb();
 		    $cd = $state->getCd();
 		    $j  = $state->getJ();
+		    $val = $x->getValue();
 		    echo "&nbsp;&nbsp;&nbsp;&nbsp;" . $x->getType() . " -> ";
 		    foreach ($ab as $sym) {
-			echo $sym->getType() . " ";
+			echo $sym->getType() . " (" . $sym->getValue() . ") ";
 		    }
 		    echo ". ";
 		    foreach ($cd as $sym) {
 			echo $sym->getType() . " ";
 		    }
-		    echo "from " . $j . "<br>\n";
+		    echo "from " . $j . " (" . $val . ")<br>\n";
 		}
 	    }
+	    echo "<hr>\n";
 	}
     }
 }

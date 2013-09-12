@@ -6,11 +6,13 @@ class ParserRule
 {
     private $symbol;
     private $rule;
+    private $reduction;
 
     public function __construct($symbol, array $rule)
     {
 	$this->setSymbol($symbol);
 	$this->setRule($rule);
+	$this->setReduction(is_callable($symbol->getReduction()) ? $symbol->getReduction() : null );
     }
 
     public function setSymbol(ParserToken $symbol)
@@ -38,6 +40,21 @@ class ParserRule
 	$rule = $this->rule;
 	assert(is_array($rule));
 	return $rule;
+    }
+
+    private function setReduction($reduction)
+    {
+	assert(is_callable($reduction) or $reduction === null);
+	$this->reduction = $reduction;
+    }
+
+    public function __toString()
+    {
+	$rule = '';
+	foreach ($this->getRule() as $sym) {
+	    $rule .= $sym->__toString() . " ";
+	}
+	return $this->getSymbol()->__toString() . ": " . $rule;
     }
 
 }
