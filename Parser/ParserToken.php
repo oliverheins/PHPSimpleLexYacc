@@ -7,6 +7,7 @@ class ParserToken
     private $type = Null;
     private $value = Null;
     private $reduction = Null;
+    private $history;
 
     public function __construct(array $args = array()) 
     {
@@ -57,6 +58,16 @@ class ParserToken
     public function setValue($value)
     {
 	$this->value = $value;
+    }
+
+    public function getHistory()
+    {
+	return $this->history;
+    }
+
+    public function addToHistory(ParserState $state)
+    {
+	$this->history = $state;
     }
 
     public function __toString()
