@@ -17,8 +17,19 @@ class ParserChart
     public function set($index, $elt)
     {
 	assert(is_int($index));
-	assert($elt instanceof ParserState);
 
+	if (is_array($elt)) {
+	    // it should be possible to pass an array of elements
+	    $this->chart[$index] = array();
+	    $this->includes[$index] = array();
+	    foreach ($elt as $state) {
+		assert($state instanceof ParserState);
+		$this->add($index, $state);
+	    }
+	    return;
+	}
+
+	assert($elt instanceof ParserState);
 	$this->chart[$index] = array();
 	$this->includes[$index] = array();
 
@@ -38,12 +49,23 @@ class ParserChart
 	return $this->chart[$index];
 
     }
+
+    public function last()
+    {
+	assert(is_array($this->chart));
+	$length = count($this->chart);
+	if ($length < 3) {
+	    return null;
+	}
+	return $this->chart[$length-2];
+    }
+
     public function add($index, $elt) 
     {
 	assert(is_int($index));
 	assert($elt instanceof ParserState);
 
-	$str_rep = $elt->__toString();
+	$str_rep = $elt->__toString() . $elt->getHistory();
 
 	// Just for safety, should never happen
 	if (!array_key_exists($index, $this->chart)) {
@@ -52,11 +74,11 @@ class ParserChart
 	}
 	// check if element already exists.  If not, add to chart
 	if (!array_key_exists($str_rep, $this->includes[$index])) {
-	    array_unshift($this->chart[$index], $elt);
+	    array_push($this->chart[$index], $elt);
 	    $this->includes[$index][$str_rep] = true;
-	    return True;
+	    return true;
 	}
-	return False;
+	return false;
     }
 
 }
