@@ -54,7 +54,7 @@ class TokenGenerator extends MethodGenerator
     {
 	$body = $this->getBody();
 	// Extract the regexp
-	$needle = '/^\h*((?:\'[^\']+\')|(?:"[^"]+"))\h*;\s*/';
+	$needle = '/^\h*((?:\'(?:[^\']|\\\')+\')|(?:"(?:[^"]|\\")+"))\h*;\s*/';
 	$found = preg_match($needle, $body, $matches);
 	if ($found) {
 	    $line = $matches[0];
