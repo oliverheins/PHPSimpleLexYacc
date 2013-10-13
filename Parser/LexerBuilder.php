@@ -7,6 +7,7 @@
  */
 
 include_once("TokensBase.php");
+include_once("AbstractBuilder.php");
 include_once("Generators/MethodGenerator.php");
 include_once("Generators/TokenGenerator.php");
 include_once("Generators/ClassGenerator.php");
@@ -16,7 +17,7 @@ include_once("Generators/PropertyGenerator.php");
  *
  * Builds the lexer from a definiton.
  */
-abstract class LexerBuilder
+abstract class LexerBuilder extends AbstractBuilder
 {
     const INITIAL = 'INITIAL';
 
@@ -25,33 +26,6 @@ abstract class LexerBuilder
      * @type array
      */
     private $tokens = array();
-
-    /** List of properties
-     *
-     * Holds all the properties of the lexer definition that don't
-     * define any token
-     *
-     * @type array
-     */
-    private $properties = array();
-
-    /** List of token related methods
-     *
-     * Holds all the methods of the lexer definition that are related
-     * to the token definition.
-     *
-     * @type array
-     */
-    private $tokenMethods = array();
-
-    /** List of methods not related to token definition
-     *
-     * Holds all the methods of the lexer definition that don't define
-     * any token.
-     *
-     * @type array
-     */
-    private $extraMethods = array();
 
     /** List of tokens that can be ignored totally
      *
@@ -76,23 +50,6 @@ abstract class LexerBuilder
      * @type array
      */
     private $inclusivestates = array();
-
-    /** Table of class hierarchy
-     *
-     * Maps a filename to the class hierarchy: 
-     * child -> parent =~ 1 -> 2
-     *
-     * @type array
-     * @see LexerBuilder::addClasshierarchy()
-     * @see LexerBuilder::getClasshierarchy()
-     */
-    private $classhierarchy = array();
-
-    /** Constructor
-     *
-     * @abstract
-     */
-    abstract public function __construct();
 
     /** Sets the tokens array
      *
@@ -156,60 +113,28 @@ abstract class LexerBuilder
      */
     public function getLexer($lexername)
     {
-	assert(is_string($lexername) && $lexername != '');
-	if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_]*\Z/', $lexername)) {
-	    throw new Exception("lexername must be a valid PHP classname.");
-	}
+	return $this->getBuild("Lexer", $lexername);
+    }
 
-	$dir = 'Parser/';
-	$lexerfile = $dir . $lexername . '.php';
-	$usecache = false;
-	if (@file_exists($lexerfile)) {
-	    $object = new ReflectionObject($this);
-	    $classlevel = 1;
-	    $newestfiletime = 0;
-	    while (true) { // traverse all parents of the lexer
-			   // definition and get the latest
-			   // modification time
-		$classfile = $object->getFileName();
-		$classname = $object->getName(); // Build class hierarchy
-		$this->addClasshierarchy($classname, $classlevel);
-		$classlevel++;
-		$filetime = @filemtime($classfile);
-		$newestfiletime = $filetime > $newestfiletime ? $filetime : $newestfiletime;
-		if ($ancestor = $object->getParentClass()) {
-		    $object = $ancestor;
-		} else {
-		    break;
-		}
-	    }
-	    // Use cache only if the cached file is newer than the
-	    // last modification
-	    if ($newestfiletime < @filemtime($lexerfile)) {
-		$usecache = true;
-	    }
-	} 
-	if ($usecache === false) {
-	    // Build a new lexer
-	    $lexer = $this->createLexer($lexername);
-	    if (!file_put_contents($lexerfile, $lexer)) {
-		throw new Exception("Can't write " . $lexerfile);
-	    };
-	}
-	include_once($lexerfile);
-	return new $lexername();
+    /** Wrapper function for the concrete creator
+     *
+     * Calls the concrete creator method
+     */
+    protected function createBuild($name)
+    {
+	return $this->createLexer($name);
     }
 
     /** Builds a new lexer
      *
-     * Called by getLexer().  Extracts the code, then builds a new
+     * Called by createBuild().  Extracts the code, then builds a new
      * lexer class file.  Uses the information from
-     * LexerBuilder::$tokenMethods to build up the rulelist.
+     * LexerBuilder::$innerMethods to build up the rulelist.
      *
      * @access private
      * @param  string $lexername    The name of the lexer (must be a valid classname).
      * @see    LexerBuilder::extractCode() for the actual parsing of the lexer definition.
-     * @see    LexerBuilder::$tokenMethods for the stored lexing methods.
+     * @see    LexerBuilder::$innerMethods for the stored lexing methods.
      * @see    LexerBuilder::$extraMethods for the rest of the methods.
      * @return string $lexer        The code of the created lexer.
      */
@@ -245,7 +170,7 @@ abstract class LexerBuilder
 
 	// Generates the rulelist
 	$cc = array(); // outer code array
-	foreach ($this->tokenMethods as $statename => $mode) {
+	foreach ($this->innerMethods as $statename => $mode) {
 	    $c = array(); // inner code array
 	    foreach ($mode as $name => $m) {
 		$regexp = $m->getRegexp();
@@ -289,13 +214,13 @@ abstract class LexerBuilder
     /** Parses the lexer definition
      *
      * and extracts the relevant code portions.  Builds up
-     * LexerBuilder::$tokenMethods and LexerBuilder::$extraMethods.
-     * Uses LexerBuilder::$classhierarchy to sort
-     * LexerBuilder::$tokenMethods.
+     * LexerBuilder::$innerMethods and LexerBuilder::$extraMethods.
+     * Uses AbstractBuilder::$classhierarchy to sort
+     * LexerBuilder::$innerMethods.
      *
      * @access private
-     * @see    LexerBuilder::$classhierarchy for the class hierarchy
-     * @see    LexerBuilder::$tokenMethods   for the stored lexing methods.
+     * @see    AbstractBuilder::$classhierarchy for the class hierarchy
+     * @see    LexerBuilder::$innerMethods   for the stored lexing methods.
      * @see    LexerBuilder::$extraMethods   for the rest of the methods.
      */
     private function extractCode() 
@@ -321,9 +246,13 @@ abstract class LexerBuilder
 	}
 
 	// Setting up Reflecting Class and Base Class
+	// We have two base classes (LexerBuilder and AbstractBuilder), 
+	// which need to be excluded.  So $grandpa is our base to start 
+	// reflecting.
 	$object = new ReflectionObject($this);
 	$parent = $object->getParentClass();
 	while ($ancestor = $parent->getParentClass()) {
+	    $grandpa = $parent;
 	    $parent = $ancestor;
 	}
 	$objectMethods = $object->getMethods();
@@ -331,7 +260,7 @@ abstract class LexerBuilder
 	foreach ($objectMethods as $method) {
 	    $methodName = $method->getName();
 	    //	    echo "Methode " . $methodName ."<br>";
-	    if ($parent->hasMethod($methodName)) { 
+	    if ($grandpa->hasMethod($methodName) or $parent->hasMethod($methodName)) { 
 		// we are only interested in methods of the child
 		// classes
 		continue;
@@ -376,20 +305,20 @@ abstract class LexerBuilder
 					      'linenumber'     => $startLine));
 		$m->extractBody();
 		$m->extractRegexp();
-		$this->tokenMethods[$state][$methodName] = $m;
+		$this->innerMethods[$state][$methodName] = $m;
 		if ($state == self::INITIAL) {
 		    // if state is initial, include this rule to all
 		    // inclusive states.
 		    foreach ($this->inclusivestates as $istate) {
-			if (! array_key_exists($istate, $this->tokenMethods)) {
+			if (! array_key_exists($istate, $this->innerMethods)) {
 			    // Init the $istate table
-			    $this->tokenMethods[$istate] = array();
+			    $this->innerMethods[$istate] = array();
 			}
 			$extMethodName = 't_' . $istate . '_' . $tokenname;
-			if (! array_key_exists($extMethodName, $this->tokenMethods[$istate])) {
+			if (! array_key_exists($extMethodName, $this->innerMethods[$istate])) {
 			    // check if there already an existing rule
 			    // for this state
-			    $this->tokenMethods[$istate][$extMethodName] = $m;
+			    $this->innerMethods[$istate][$extMethodName] = $m;
 			}
 		    }
 		}
@@ -412,7 +341,7 @@ abstract class LexerBuilder
 
 	foreach ($objectProperties as $prop) {
 	    $propName = $prop->getName();
-	    if ($parent->hasProperty($prop)) {
+	    if ($grandpa->hasProperty($prop) or $parent->hasProperty($prop)) {
 		continue;
 	    }
 	    $propValue = isset($defaultProperties[$propName]) ? $defaultProperties[$propName] : null;
@@ -437,7 +366,7 @@ abstract class LexerBuilder
 		$state = $matches[1];
 		if ($state == '') $state = self::INITIAL;
 		$tokenname = $matches[2];
-		if (array_search($tokenname, $this->tokens)) {
+		if (array_search($tokenname, $this->tokens) !== false) {
 		    $tokens[$tokenname] = true;
 		    $found = true;
 		    $m = new TokenGenerator(array('name'           => $propName,
@@ -449,20 +378,20 @@ abstract class LexerBuilder
 						  'classhierarchy' => $classhierarchy,
 						  'linenumber'     => $startLine));
 		    //		    $m->extractBody();
-		    $this->tokenMethods[$state][$propName] = $m;
+		    $this->innerMethods[$state][$propName] = $m;
 		    if ($state == self::INITIAL) {
 			// if state is initial, include this rule to all
 			// inclusive states.
 			foreach ($this->inclusivestates as $istate) {
-			    if (! array_key_exists($istate, $this->tokenMethods)) {
+			    if (! array_key_exists($istate, $this->innerMethods)) {
 				// Init the $istate table
-				$this->tokenMethods[$istate] = array();
+				$this->innerMethods[$istate] = array();
 			    }
 			    $extMethodName = 't_' . $istate . '_' . $tokenname;
-			    if (! array_key_exists($extMethodName, $this->tokenMethods[$istate])) {
+			    if (! array_key_exists($extMethodName, $this->innerMethods[$istate])) {
 				// check if there already an existing rule
 				// for this state
-				$this->tokenMethods[$istate][$extMethodName] = $m;
+				$this->innerMethods[$istate][$extMethodName] = $m;
 			    }
 			}
 		    }
@@ -487,8 +416,8 @@ abstract class LexerBuilder
 //	}
 
 
-	foreach($this->tokenMethods as $key => $val) {
-	    uasort($this->tokenMethods[$key], array("TokenGenerator", "compare"));
+	foreach($this->innerMethods as $key => $val) {
+	    uasort($this->innerMethods[$key], array("TokenGenerator", "compare"));
 	}
     }
 
@@ -503,50 +432,6 @@ abstract class LexerBuilder
     private function tokenMethodTemplate($token)
     {
 	return $token;
-    }
-
-    /** Adds a class to the class hierarchy
-     * 
-     * An integer value correspending to the nesting level is added.
-     *
-     * @param string $classname  The name of the class
-     * @param int    $n          The nesting level
-     * @see LexerBuilder::$classhierarchy
-     */
-    private function addClasshierarchy($classname, $n)
-    {
-	assert(is_string($classname));
-	assert($classname != '');
-	assert(is_int($n));
-	assert($n >= 1);
-	$this->classhierarchy[$classname] = $n;
-    }
-
-    /** Returns the whole class hierarchy table
-     *
-     * @return array
-     * @see LexerBuilder::$classhierarchy
-     */
-    private function getClasshierarchy()
-    {
-	$c = $this->classhierarchy;
-	assert(is_array($c));
-	return $c;
-    }
-
-    /** Returns the level of a class in the class hierarchy
-     *
-     * @param  string $classname  The name of the class
-     * @return int    The level of the class in the class hierarchy 
-     * @return false  if class is not in the hierarchy
-     */
-    private function getLevelForClass($classname)
-    {
-	assert(is_string($classname));
-	if (isset($this->classhierarchy[$classname])) { 
-	    return $this->classhierarchy[$classname];
-	}
-	return false;
     }
 
     /** Returns the list of Tokens that can be fully ignored
