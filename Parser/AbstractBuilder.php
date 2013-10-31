@@ -1,4 +1,5 @@
 <?php
+include_once("Helpers/SimpleIndenter.php");
 
 abstract class AbstractBuilder
 {
@@ -113,7 +114,6 @@ abstract class AbstractBuilder
 			   // modification time
 		$classfile = $object->getFileName();
 		$classname = $object->getName(); // Build class hierarchy
-		echo $classname . "<br>";
 		$this->addClasshierarchy($classname, $classlevel);
 		$classlevel++;
 		$filetime = @filemtime($classfile);
@@ -156,9 +156,12 @@ abstract class AbstractBuilder
 	if ($this->useCache($filename) === false) {
 	    // Build a new parser
 	    $parser = $this->createBuild($name);
+	    $indenter = new SimpleIndenter($parser);
+	    $indenter->process();
+	    $parser = $indenter->getResult();
 	    if (!file_put_contents($filename, $parser)) {
 		throw new Exception("Can't write " . $filename);
-	    };
+	    }
 	}
 	include_once($filename);
 	return new $name();
