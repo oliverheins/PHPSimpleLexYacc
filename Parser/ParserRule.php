@@ -19,7 +19,7 @@ class ParserRule
 	$this->setPrecedence($prec);
 	$this->setAssociativity($assoc);
 	$this->setRule($rule);
-	$this->setReduction(is_callable($symbol->getReduction()) ? $symbol->getReduction() : null );
+	$this->setReduction((is_callable($symbol->getReduction()) or is_string($symbol->getReduction())) ? $symbol->getReduction() : null );
     }
 
     protected function setPrecedence($prec)
@@ -77,7 +77,7 @@ class ParserRule
 
     private function setReduction($reduction)
     {
-	assert(is_callable($reduction) or $reduction === null);
+	assert(is_callable($reduction) or is_string($reduction) or $reduction === null);
 	$this->reduction = $reduction;
     }
 
