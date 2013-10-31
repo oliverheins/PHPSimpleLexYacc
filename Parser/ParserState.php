@@ -153,8 +153,13 @@ class ParserState
     public function doReduction(array $tokens)
     {
 	if ($this->reduction == Null) return;
-	assert(is_callable($this->reduction));
-	$result = $this->reduction->__invoke($tokens);
+	if (is_callable($this->reduction)) {
+	    $result = $this->reduction->__invoke($tokens);
+	} elseif (is_string($this->reduction)) {
+	    $result = $this->reduction($tokens);
+	} else {
+	    throw new Exception('Reduction is not callable error.');
+	}
 	return $result;
     }
 
@@ -218,10 +223,10 @@ class ParserState
 	$x->addToHistory($clone);
 	return array_map(function($jstate) use ($x) {
 		return new ParserState($jstate->getX(), 
-					    array_merge($jstate->getAb(), array($x)), 
-					    array_slice($jstate->getCd(), 1), 
-					    $jstate->getJ(),
-					    $jstate->getRule());
+				       array_merge($jstate->getAb(), array($x)), 
+				       array_slice($jstate->getCd(), 1), 
+				       $jstate->getJ(),
+				       $jstate->getRule());
 	    },
 	    array_values(array_filter($chart[$j], function($jstate) use ($x) {
 			return count($jstate->getCd()) > 0 and $jstate->getCd()[0]->equal($x);
