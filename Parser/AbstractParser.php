@@ -3,23 +3,15 @@
 include_once("ParserRule.php");
 include_once("ParserState.php");
 include_once("ParserChart.php");
+include_once("ParserToken.php");
 
-class AbstractParser
+abstract class AbstractParser
 {
-
     private $grammar;
     private $chart;
     private $start_rule;
     private $complex;
-    private $debuglevel;
-
-    public function __construct(array $grammar, array $complexPoints, $debuglevel = 0)
-    {
-	assert(is_int($debuglevel) and $debuglevel >= 0 and $debuglevel <= 2);
-	$this->setGrammar($grammar);
-	$this->setComplexPoints($complexPoints);
-	$this->debuglevel = $debuglevel;
-    }
+    private $debuglevel = 0;
 
     public function getFinalStates()
     {
@@ -52,12 +44,14 @@ class AbstractParser
     protected function setComplexPoints(array $complexPoints)
     {
 	$this->complex = array();
-	foreach ($complexPoints as $point) {
-	    $rule = $point[0];
-	    $pos = $point[1];
-	    assert($rule instanceof ParserRule);
-	    assert(is_int($pos));
-	    $this->setComplexPoint($rule, $pos);
+	foreach ($complexPoints as $symbol => $rules) {
+	    foreach ($rules as $point) {
+		$rule = $this->grammar[$point[0]];
+		$pos = $point[1];
+		assert($rule instanceof ParserRule);
+		assert(is_int($pos));
+		$this->setComplexPoint($rule, $pos);
+	    }
 	}
     }
 
@@ -315,6 +309,12 @@ class AbstractParser
 
     }
 
+    protected function setDebugLevel($level)
+    {
+	assert(is_int($level) and $level >= 0 and $level <= 2);
+	$this->debuglevel = $level;
+    }
+
     protected function getDebugLevel()
     {
 	$debuglevel = $this->debuglevel;
@@ -347,42 +347,4 @@ class AbstractParser
     }
 
 }
-
-//$grammar = [ 
-//    ["exp", ["exp", "+", "exp"]],
-//    ["exp", ["exp", "-", "exp"]],
-//    ["exp", ["(", "exp", ")"]],
-//    ["exp", ["num"]],
-//    ["t",["I","like","t"]],
-//    ["t",[""]]
-//];
-
-//$grammar = [
-//	    new ParserRule("S", ["P" ]),
-//	    new ParserRule("P", ["(" , "P", ")" ]),
-//	    new ParserRule("P", [ ]),
-//	    ];
-//$tokens = [ "(", "(", ")", ")"];
-//$test = new AbstractParser($grammar);
-//$result=$test->parse($tokens);
-//echo $result;
-
-//$chart = [[['exp', ['exp'], ['+', 'exp'], 0], ['exp', [], ['num'], 0], ['exp', [], ['[', 'exp', ']'], 0], ['exp', [], ['exp', '-', 'exp'], 0], ['exp', [], ['exp', '+', 'exp'], 0]], [['exp', ['exp', '+'], ['exp'], 0]], [['exp', ['exp', '+', 'exp'], [], 0]]];
-//
-//echo "\n\n\n";
-//
-//var_dump($test->reductions($chart,2,'exp',['exp','+','exp'],[],0));
-//
-//echo "\n\n\n";
-//
-//var_dump( [['exp', ['exp'], ['-', 'exp'], 0], ['exp', ['exp'], ['+', 'exp'], 0]]);
-//
-//echo "\n<br>\n\n";
-//
-//echo $test->reductions($chart,2,'exp',['exp','+','exp'],[],0) == [['exp', ['exp'], ['-', 'exp'], 0], ['exp', ['exp'], ['+', 'exp'], 0]] ? "True" : "False";
-
-// echo $test->shift(["exp","+","exp"],2,"exp",["exp","+"],["exp"],0) == array('exp', ['exp', '+', 'exp'], [], 0) ? "True" : "False";
-// echo $test->shift(["exp","+","exp"],0,"exp",[],["exp","+","exp"],0) == array('exp', ['exp'], ['+', 'exp'], 0) ? "True" : "False";
-// echo $test->shift(["exp","+","exp"],3,"exp",["exp","+","exp"],[],0) == Null ? "True" : "False";
-// echo $test->shift(["exp","+","ANDY LOVES COOKIES"],2,"exp",["exp","+"],["exp"],0) == Null ? "True" : "False";
 
