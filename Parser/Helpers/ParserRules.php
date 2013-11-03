@@ -21,30 +21,24 @@ class ParserRules
 
     public function generateCode($methods)
     {
-	// Generate the anonymous functions
-	$lambda = array();
-	foreach ($methods as $method) {
-	    assert($method instanceof MethodGenerator);
-	    $lambda[$method->getName()] = $method->generateLambda();
-	}
-
 	// Generate the grammar
 	$code = '$this->setGrammar(array(';
 	foreach ($this->rules as $rule) {
 	    $lhs           = $rule[0];
 	    $rhs           = $rule[1];
-	    $function      = $lambda[$rule[2]];
+	    $function      = $rule[2];
 	    $precedence    = $rule[3];
 	    $associativity = $rule[4];
-	    $code .= 'new ParserRule(new ParserToken(array("type" => "' . $lhs . '", ' .
-		'"reduction" => ' . $function . ')),' . "\n";
+	    $code .= 'new ParserRule(new ParserToken(array("type" => "' . $lhs . '", '
+		. '"reduction" => "' . $function . '")),' . "\n";
 	    $code .= 'array(';
 	    foreach ($rhs as $symbol) {
 		$code .= 'new ParserToken(array("type" => "' . $symbol .'")),' . "\n";
 	    }
 	    $code .= '),' . "\n";
 	    $code .= $precedence . ',' . "\n";
-	    $code .= $associativity . '),' . "\n";
+	    $code .= $associativity . ',' . "\n";
+	    $code .= '$this),' . "\n";
 	}
 	$code .= '));' . "\n";
 

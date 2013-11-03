@@ -9,9 +9,10 @@ class ParserRule
     private $reduction;
     private $precedence;
     private $assoc;  // left = 0, right = 1
+    private $parser = null;
 
     // $assoc: 0 = left, 1 = right
-    public function __construct($symbol, array $rule, $prec = 0, $assoc = 0)
+    public function __construct($symbol, array $rule, $prec = 0, $assoc = 0, $parser = null)
     {
 	assert(is_int($prec));
 	assert(is_int($assoc));
@@ -20,6 +21,21 @@ class ParserRule
 	$this->setAssociativity($assoc);
 	$this->setRule($rule);
 	$this->setReduction((is_callable($symbol->getReduction()) or is_string($symbol->getReduction())) ? $symbol->getReduction() : null );
+	if($parser !== null) {
+	    $this->setParser($parser);
+	}
+    }
+
+    protected function setParser(AbstractParser $parser)
+    {
+	$this->parser = $parser;
+    }
+
+    public function getParser()
+    {
+	$parser = $this->parser;
+	assert($parser instanceof AbstractParser or $parser === null);
+	return $parser;
     }
 
     protected function setPrecedence($prec)

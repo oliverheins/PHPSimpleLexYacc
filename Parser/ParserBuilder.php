@@ -118,7 +118,7 @@ abstract class ParserBuilder extends AbstractBuilder
 		$j = 0;
 		foreach ($rhs as $s) {
 		    // does symbol occur on right hand side of the, but not on lhs?
-		    if ($symbol == $s && $ambiguous[$i] != $s) {
+		    if ($symbol == $s && array_key_exists($i, $ambiguous) && $ambiguous[$i] != $s) {
 			if (! array_key_exists($s, $cp)) {
 			    $cp[$s] = array();
 			}
@@ -196,6 +196,10 @@ abstract class ParserBuilder extends AbstractBuilder
 				       'body'   => $constructcode));
 
 	$class->addMethod($c);
+
+	foreach ($this->innerMethods as $name => $method) {
+	    $class->addMethod($method);
+	}
 
 	foreach ($this->extraMethods as $name => $method) {
 	    $class->addMethod($method);

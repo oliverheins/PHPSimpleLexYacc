@@ -46,7 +46,7 @@ class ParserToken
 
     public function getReduction()
     {
-	return is_callable($this->reduction) ? $this->reduction : null;
+	return (is_callable($this->reduction) or is_string($this->reduction)) ? $this->reduction : null;
     }
 
     public function getValue()

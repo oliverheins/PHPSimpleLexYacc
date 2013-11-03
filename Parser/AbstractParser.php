@@ -224,7 +224,7 @@ abstract class AbstractParser
 	// Create chart as list of empty lists, length = no of tokens
 	$this->chart = new ParserChart(count($tokens));
 	// $start_state: StartSymbol -> [] . [StartRule] from 0
-	$start_state = new ParserState($this->start_rule->getSymbol(), [], $this->start_rule->getRule(), 0);
+	$start_state = new ParserState($this->start_rule->getSymbol(), [], $this->start_rule->getRule(), 0, $this->start_rule);
 	// Add $start_state to the chart
 	$this->chart->set(0, $start_state);
 	for ($i = 0; $i < count($tokens); $i++) {
