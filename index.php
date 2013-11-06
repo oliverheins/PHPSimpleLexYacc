@@ -1,5 +1,4 @@
 <?php
-
 include_once("Parser/LexerBuilder.php");
 include_once("Parser/AbstractParser.php");
 include_once("Parser/ParserRule.php");
