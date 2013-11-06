@@ -1,6 +1,6 @@
 <?php
 
-include_once("MethodGenerator.php");
+require_once("MethodGenerator.php");
 
 class TokenGenerator extends MethodGenerator
 {

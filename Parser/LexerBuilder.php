@@ -6,12 +6,12 @@
  * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
  */
 
-include_once("TokensBase.php");
-include_once("AbstractBuilder.php");
-include_once("Generators/MethodGenerator.php");
-include_once("Generators/TokenGenerator.php");
-include_once("Generators/ClassGenerator.php");
-include_once("Generators/PropertyGenerator.php");
+require_once("TokensBase.php");
+require_once("AbstractBuilder.php");
+require_once("Generators/MethodGenerator.php");
+require_once("Generators/TokenGenerator.php");
+require_once("Generators/ClassGenerator.php");
+require_once("Generators/PropertyGenerator.php");
 
 /** LexerBuilder class
  *
@@ -144,7 +144,7 @@ abstract class LexerBuilder extends AbstractBuilder
 
 	ob_start();
 	echo '<?php' . "\n\n"
-	    . 'include_once("AbstractLexer.php");' . "\n\n";
+	    . 'require_once("AbstractLexer.php");' . "\n\n";
 
 	$class = new ClassGenerator(array('name' => $lexername,
 					  'extension' => 'AbstractLexer'));
@@ -271,7 +271,7 @@ abstract class LexerBuilder extends AbstractBuilder
 	    if (array_search($methodName, $methods) !== false) {
 		preg_match('/t_(?:([a-zA-Z]+)_)?([a-zA-Z]+)/', $methodName, $matches);
 		$state = $matches[1];
-		if ($state == '') $state = self::INITIAL;
+                if ($state == '') { $state = self::INITIAL; }
 		$tokenname = $matches[2];
 		$tokens[$tokenname] = true;
 		$found = true;
@@ -364,7 +364,7 @@ abstract class LexerBuilder extends AbstractBuilder
 	    $found = false;
 	    if (preg_match('/t_(?:([a-zA-Z]+)_)?([a-zA-Z]+)/', $propName, $matches)) {
 		$state = $matches[1];
-		if ($state == '') $state = self::INITIAL;
+                if ($state == '') { $state = self::INITIAL; }
 		$tokenname = $matches[2];
 		if (array_search($tokenname, $this->tokens) !== false) {
 		    $tokens[$tokenname] = true;

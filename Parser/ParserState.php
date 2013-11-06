@@ -153,7 +153,7 @@ class ParserState
     public function doReduction(array $tokens)
     {
 	$reduction = $this->reduction;
-	if ($reduction == Null) return;
+        if ($reduction == Null) { return; }
 	if (is_callable($reduction)) {
 	    $result = $reduction->__invoke($tokens);
 	} elseif (is_string($this->reduction) && $this->rule instanceof ParserRule) {
@@ -161,9 +161,6 @@ class ParserState
 	    assert($parser instanceof AbstractParser);
 	    $result = $parser->$reduction($tokens);
 	} else {
-//	    var_dump($this->reduction);
-//	    echo gettype($this->rule) ."<br>";
-//	    var_dump($this);
 	    throw new Exception('Reduction is not callable error.');
 	}
 	return $result;

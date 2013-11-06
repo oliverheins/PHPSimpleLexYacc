@@ -1,6 +1,6 @@
 <?php
 
-include_once("MemberGenerator.php");
+require_once("MemberGenerator.php");
 
 class MethodGenerator extends MemberGenerator
 {

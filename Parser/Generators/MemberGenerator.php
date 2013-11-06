@@ -1,6 +1,6 @@
 <?php
 
-include_once("CodeGenerator.php");
+require_once("CodeGenerator.php");
 
 abstract class MemberGenerator extends CodeGenerator
 {

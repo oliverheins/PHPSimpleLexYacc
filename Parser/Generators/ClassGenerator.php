@@ -1,7 +1,7 @@
 <?php
 
-include_once("MethodGenerator.php");
-include_once("PropertyGenerator.php");
+require_once("MethodGenerator.php");
+require_once("PropertyGenerator.php");
 
 class ClassGenerator extends CodeGenerator
 {

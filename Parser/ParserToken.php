@@ -1,6 +1,6 @@
 <?php
 
-include_once("Token.php");
+require_once("Token.php");
 
 class ParserToken
 {
@@ -51,7 +51,7 @@ class ParserToken
 
     public function getValue()
     {
-	if (! $this->value) return null;
+        if (! $this->value) { return null; }
 	return $this->value;
     }
 
@@ -77,7 +77,11 @@ class ParserToken
 
     public function __clone()
     {
-	if (is_object($this->value)) $this->value = clone $this->value;
-	if (is_object($this->type))  $this->type  = clone $this->type;
+	if (is_object($this->value)) { 
+            $this->value = clone $this->value;
+        }
+        if (is_object($this->type)) {
+            $this->type  = clone $this->type;
+        }
     }
 }

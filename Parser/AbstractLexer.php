@@ -1,6 +1,6 @@
 <?php
 
-include_once("Token.php");
+require_once("Token.php");
 
 abstract class AbstractLexer
 {
@@ -35,7 +35,7 @@ abstract class AbstractLexer
 
     protected function lex_(&$string, &$position)
     {
-	if (strlen($string) == 0) return;
+        if (strlen($string) === 0) { return; }
 	if ($this->ignoreFunction->__invoke($string[0])) {
 	    $string = substr($string, 1);
 	    return;

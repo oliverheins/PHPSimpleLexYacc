@@ -1,11 +1,11 @@
 <?php
-include_once("AbstractBuilder.php");
-include_once("RuleLexingRules.php");
-include_once("Token.php");
-include_once("Helpers/ParserRules.php");
-include_once("Generators/MethodGenerator.php");
-include_once("Generators/PropertyGenerator.php");
-include_once("Generators/ClassGenerator.php");
+require_once("AbstractBuilder.php");
+require_once("RuleLexingRules.php");
+require_once("Token.php");
+require_once("Helpers/ParserRules.php");
+require_once("Generators/MethodGenerator.php");
+require_once("Generators/PropertyGenerator.php");
+require_once("Generators/ClassGenerator.php");
 
 abstract class ParserBuilder extends AbstractBuilder
 {
@@ -104,9 +104,9 @@ abstract class ParserBuilder extends AbstractBuilder
 	/* calculate complex points: a complex point is a rule, at
 	   which a symbol occurs only on rhs, not on lhs
 	
-	   NOTE: evtl. ist es nötig zu prüfen, ob der complex point
+	   NOTE: evtl. ist es nÃ¶tig zu prÃ¼fen, ob der complex point
 	   selbst wieder eine mehrdeutige Produktionsregel ist --
-	   ggf. muss dann eine Ebene höher gesprungen werden
+	   ggf. muss dann eine Ebene hÃ¶her gesprungen werden
 	   (rekursiv) */
 	$cp = array(); // $cp[symbol] => [no of rule, position]
 	foreach ($asymbols as $symbol => $val) {
@@ -171,16 +171,10 @@ abstract class ParserBuilder extends AbstractBuilder
     protected function createParser($parsername)
     {
 	$this->extractCode();
-//	var_dump($this->rules);
-//	echo "\n<hr>\n";
-//	var_dump($this->properties);
-//	echo "\n<hr>\n";
-//	var_dump($this->innerMethods);
-//	echo "\n<hr>\n";
 
 	ob_start();
 	echo '<?php' . "\n\n" .
-	    'include_once("AbstractParser.php");' . "\n\n";
+	    'require_once("AbstractParser.php");' . "\n\n";
 
 	$class = new ClassGenerator(array('name' => $parsername,
 					  'extension' => 'AbstractParser'));
@@ -271,10 +265,8 @@ abstract class ParserBuilder extends AbstractBuilder
 	case 'object':
 	case 'resource':
 	    throw new Exception(ucfirst($type) . "s are not (yet) implemented.  Don't use them now, but file a bug report if you really need them.");
-	    break;
 	case 'unknown type':
 	    throw new Exception($type . ' is not a valid type, check your source.');
-	    break;
 	default:
 	    throw new Exception('This should not happen, consider this a bug: type '. $type . ' is unknown, but should be known. :(');
 	}
@@ -359,11 +351,14 @@ abstract class ParserBuilder extends AbstractBuilder
 	foreach ($interesting as $method) {
 	    $methodName = $method->getName();
 	    $visibility = "protected";
-	    if ($method->isPrivate()) $visibility = "private";
-	    elseif ($method->isPublic()) $visibility = "public";
-	    $static   = $method->isStatic()   ? 'static'   : '';
-	    $final    = $method->isFinal()    ? 'final'    : '';
-	    $abstract = $method->isAbstract() ? 'abstract' : '';
+	    if ($method->isPrivate()) {
+                $visibility = "private";
+            } elseif ($method->isPublic()) {
+                $visibility = "public";
+            }
+//	    $static   = $method->isStatic()   ? 'static'   : '';
+//	    $final    = $method->isFinal()    ? 'final'    : '';
+//	    $abstract = $method->isAbstract() ? 'abstract' : '';
 	    $filename_ = $method->getFileName();
 	    if ($filename_ != $filename) {
 		// only read file if method is another file
@@ -379,8 +374,8 @@ abstract class ParserBuilder extends AbstractBuilder
 		});
 	    $methodSource = implode("\n", $methodSource);
 
-	    $classname = $method->getDeclaringClass()->getName();
-	    $classhierarchy = $this->getLevelForClass($classname);
+//	    $classname = $method->getDeclaringClass()->getName();
+//	    $classhierarchy = $this->getLevelForClass($classname);
 
 	    $m = new MethodGenerator(array('name'       => $methodName,
 					   'source'     => $methodSource,
@@ -389,8 +384,7 @@ abstract class ParserBuilder extends AbstractBuilder
 					   'docstring'  => $method->getDocComment()));
 	    $m->extractBody();
 
-	    if (preg_match('/p_([a-zA-Z]+)/', $methodName, $matches)) {
-		$reductionname = $matches[1];
+	    if (preg_match('/p_([a-zA-Z]+)/', $methodName)) {
 		$result = $this->extractRules($m->getBody());
 		$body  = $result[0];
 		$rules = $result[1];
@@ -410,7 +404,6 @@ abstract class ParserBuilder extends AbstractBuilder
 	$lexer = $r->getLexer('ParserRuleLexer');
 	$lexer->setData($string);
 	$lexer->lex();
-	$position = 0;
 	$tokens = $lexer->getTokens();
 	$this->parseRules($tokens, $methodName);
     }
@@ -482,7 +475,6 @@ abstract class ParserBuilder extends AbstractBuilder
 		throw new Exception("This should never happen.  Error in ParserBuilder::parseRules()");
 	    }
 	}
-	$rules = array();
 	foreach ($rhs as $i => $rule) {
 	    $this->rules->addRule($lhs, $rule, $methodName, $precedence[$i][0], $precedence[$i][1]);
 	}
@@ -500,7 +492,7 @@ abstract class ParserBuilder extends AbstractBuilder
 	} elseif ($found === false) {
 	    throw new Exception("Fatal regexp error");
 	} else {
-	    $regexp = '//';
+            throw new Exception('No Rule found!');
 	}
 	return array($body, $rules);
     }

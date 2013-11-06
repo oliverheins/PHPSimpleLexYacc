@@ -1,6 +1,6 @@
 <?php
 
-include_once("ParserState.php");
+require_once("ParserState.php");
 
 class ParserRule
 {

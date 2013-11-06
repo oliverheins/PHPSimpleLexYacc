@@ -1,6 +1,6 @@
 <?php
 
-include_once("LexerBuilder.php");
+require_once("LexerBuilder.php");
 
 class RuleLexingRules extends LexerBuilder
 {

@@ -1,9 +1,9 @@
 <?php
 
-include_once("ParserRule.php");
-include_once("ParserState.php");
-include_once("ParserChart.php");
-include_once("ParserToken.php");
+require_once("ParserRule.php");
+require_once("ParserState.php");
+require_once("ParserChart.php");
+require_once("ParserToken.php");
 
 abstract class AbstractParser
 {
@@ -79,19 +79,19 @@ abstract class AbstractParser
 	    $assoc2 = $curr2[1];
 	    $left2  = $curr2[2];
 	    $right2 = $curr2[3];
-	    if ($prec1 > $prec2) return true;
-	    if ($prec1 < $prec2) return false;
+            if ($prec1 > $prec2) { return true; }
+            if ($prec1 < $prec2) { return false; }
 	    if ($assoc1 != $assoc2) {
 		throw new Exception('Associativity Error.  These symbols should have the same associativity.  Check your grammar!');
 	    }
 	    switch ($assoc1) {
 	    case 'left':
-		if ($left1 > $left2) return true;
-		if ($left1 < $left2) return false;
+                if ($left1 > $left2) { return true; }
+                if ($left1 < $left2) { return false; }
 		break;
 	    case 'right':
-		if ($right1 > $right2) return true;
-		if ($right1 < $right2) return false;
+                if ($right1 > $right2) { return true; }
+                if ($right1 < $right2) { return false; }
 		break;
 	    default:
 		throw new Exception('Associativity Error: neither left nor right (' . $assoc1 .')');
@@ -219,7 +219,6 @@ abstract class AbstractParser
 
     public function parse(array $tokens)
     {
-	$work_count = 0;
 	$tokens[] = "end_of_input_marker"; // TODO
 	// Create chart as list of empty lists, length = no of tokens
 	$this->chart = new ParserChart(count($tokens));
@@ -228,7 +227,6 @@ abstract class AbstractParser
 	// Add $start_state to the chart
 	$this->chart->set(0, $start_state);
 	for ($i = 0; $i < count($tokens); $i++) {
-	    $z = 0;
 	    while (True) {
 		$changes = false;
 		foreach ($this->chart->get($i) as $state) {

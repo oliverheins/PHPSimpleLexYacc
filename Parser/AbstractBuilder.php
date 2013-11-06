@@ -1,5 +1,5 @@
 <?php
-include_once("Helpers/SimpleIndenter.php");
+require_once("Helpers/SimpleIndenter.php");
 
 abstract class AbstractBuilder
 {
@@ -41,6 +41,16 @@ abstract class AbstractBuilder
      */
     private $classhierarchy = array();
 
+    /** Debug status
+     *
+     * 0: off
+     * 1: on
+     * 2: verbose
+     * 
+     * @var type int
+     */
+    protected $debug = 0;
+    
     /** Constructor
      *
      * @abstract
@@ -102,7 +112,7 @@ abstract class AbstractBuilder
      */
     protected function useCache($filename)
     {
-	if (isset($this->debug)) return false;
+        if (isset($this->debug)) { return false; }
 
 	$usecache = false;
 	if (@file_exists($filename)) {
@@ -163,7 +173,7 @@ abstract class AbstractBuilder
 		throw new Exception("Can't write " . $filename);
 	    }
 	}
-	include_once($filename);
+	require_once($filename);
 	return new $name();
     }
     
