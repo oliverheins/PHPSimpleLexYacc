@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 require_once("ParserRule.php");
 require_once("ParserState.php");
@@ -82,7 +83,7 @@ abstract class AbstractParser
             if ($prec1 > $prec2) { return true; }
             if ($prec1 < $prec2) { return false; }
 	    if ($assoc1 != $assoc2) {
-		throw new Exception('Associativity Error.  These symbols should have the same associativity.  Check your grammar!');
+		throw new \Exception('Associativity Error.  These symbols should have the same associativity.  Check your grammar!');
 	    }
 	    switch ($assoc1) {
 	    case 'left':
@@ -94,7 +95,7 @@ abstract class AbstractParser
                 if ($right1 < $right2) { return false; }
 		break;
 	    default:
-		throw new Exception('Associativity Error: neither left nor right (' . $assoc1 .')');
+		throw new \Exception('Associativity Error: neither left nor right (' . $assoc1 .')');
 	    }
 	}
 	return false;

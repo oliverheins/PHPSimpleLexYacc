@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 require_once("LexerBuilder.php");
 

@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 abstract class TokensBase
 {

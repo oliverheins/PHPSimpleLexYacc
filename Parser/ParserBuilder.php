@@ -1,11 +1,18 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
+
 require_once("AbstractBuilder.php");
 require_once("RuleLexingRules.php");
 require_once("Token.php");
 require_once("Helpers/ParserRules.php");
+use PHPSimpleLexYacc\Parser\Helpers\ParserRules;
+
 require_once("Generators/MethodGenerator.php");
 require_once("Generators/PropertyGenerator.php");
 require_once("Generators/ClassGenerator.php");
+use PHPSimpleLexYacc\Parser\Generators\MethodGenerator;
+use PHPSimpleLexYacc\Parser\Generators\PropertyGenerator;
+use PHPSimpleLexYacc\Parser\Generators\ClassGenerator;
 
 abstract class ParserBuilder extends AbstractBuilder
 {
@@ -69,7 +76,7 @@ abstract class ParserBuilder extends AbstractBuilder
 		    $associativity = $token == 'left' ? 0 : 1;
 		} else {
 		    if (array_key_exists($token, $this->precedence)) {
-			throw new Exception('Duplicate precedence setting: ' . $token);
+			throw new \Exception('Duplicate precedence setting: ' . $token);
 		    }
 		    $this->precedence[$token] = array($level, $associativity);
 		}
@@ -173,7 +180,8 @@ abstract class ParserBuilder extends AbstractBuilder
 	$this->extractCode();
 
 	ob_start();
-	echo '<?php' . "\n\n" .
+	echo '<?php' . "\n" .
+            'namespace PHPSimpleLexYacc\Parser;' . "\n\n" .
 	    'require_once("AbstractParser.php");' . "\n\n";
 
 	$class = new ClassGenerator(array('name' => $parsername,
@@ -264,11 +272,11 @@ abstract class ParserBuilder extends AbstractBuilder
 	    return "'" . $result . "'";
 	case 'object':
 	case 'resource':
-	    throw new Exception(ucfirst($type) . "s are not (yet) implemented.  Don't use them now, but file a bug report if you really need them.");
+	    throw new \Exception(ucfirst($type) . "s are not (yet) implemented.  Don't use them now, but file a bug report if you really need them.");
 	case 'unknown type':
-	    throw new Exception($type . ' is not a valid type, check your source.');
+	    throw new \Exception($type . ' is not a valid type, check your source.');
 	default:
-	    throw new Exception('This should not happen, consider this a bug: type '. $type . ' is unknown, but should be known. :(');
+	    throw new \Exception('This should not happen, consider this a bug: type '. $type . ' is unknown, but should be known. :(');
 	}
     }
 
@@ -278,7 +286,7 @@ abstract class ParserBuilder extends AbstractBuilder
 	// We have two base classes (LexerBuilder and AbstractBuilder), 
 	// which need to be excluded.  So $grandpa is our base to start 
 	// reflecting.
-	$object = new ReflectionObject($this);
+	$object = new \ReflectionObject($this);
 	$this->parent = $object->getParentClass();
 	while ($ancestor = $this->parent->getParentClass()) {
 	    $this->grandpa = $this->parent;
@@ -306,12 +314,12 @@ abstract class ParserBuilder extends AbstractBuilder
 	$interesting = array();
 	foreach ($members as $member) {
 	    $name = $member->getName();
-	    if ($member instanceof ReflectionProperty) {
+	    if ($member instanceof \ReflectionProperty) {
 		$has = 'hasProperty';
-	    } elseif ($member instanceof ReflectionMethod) {
+	    } elseif ($member instanceof \ReflectionMethod) {
 		$has = 'hasMethod';
 	    } else {
-		throw new Exception('Member neither instance of ReflectionProperty nor of ReflectionMethod.  This should never happen!');
+		throw new \Exception('Member neither instance of ReflectionProperty nor of ReflectionMethod.  This should never happen!');
 	    }
 
 	    if ($this->grandpa->$has($name) or $this->parent->$has($name)) { 
@@ -422,21 +430,21 @@ abstract class ParserBuilder extends AbstractBuilder
 		switch ($token->getType()) {
 		case 'SYMBOL':
 		    if (isset($lhs)) {
-			throw new Exception("Error in parser rule definition: LHS symbol defined twice:\n" .
+			throw new \Exception("Error in parser rule definition: LHS symbol defined twice:\n" .
 					    "pos " .$token->getPosition(). ", line ". $token->getLinenumber());
 		    }
 		    $lhs = $token->getValue();
 		    break;
 		case 'COLON':
 		    if (!isset($lhs)) {
-			throw new Exception("Error in parser rule definition: LHS symbol not defined:\n" .
+			throw new \Exception("Error in parser rule definition: LHS symbol not defined:\n" .
 					    "pos " .$token->getPosition(). ", line ". $token->getLinenumber());
 		    }
 		    $state = 1;
 		    $rhs[0] = array();
 		    break;
 		default:
-		    throw new Exception("Error in parser rule definition: unknown symbol:\n" .
+		    throw new \Exception("Error in parser rule definition: unknown symbol:\n" .
 					"pos " .$token->getPosition(). ", line ". $token->getLinenumber());
 		}
 		break;
@@ -458,7 +466,7 @@ abstract class ParserBuilder extends AbstractBuilder
 		    break;
 		case 'BAR':
 		    if (count($rhs[$i]) == 0) { // no rhs defined yet
-			throw new Exception("Error in parser rule definition: no rhs defined:\n" .
+			throw new \Exception("Error in parser rule definition: no rhs defined:\n" .
 					    "pos " .$token->getPosition(). ", line ". $token->getLinenumber());
 		    }
 		    $i++;
@@ -466,13 +474,13 @@ abstract class ParserBuilder extends AbstractBuilder
 		    $rhs[$i] = array();
 		    break;
 		default:
-		    throw new Exception("Error in parser rule definition: unknown symbol:\n" .
+		    throw new \Exception("Error in parser rule definition: unknown symbol:\n" .
 					"pos " .$token->getPosition(). ", line ". $token->getLinenumber());
 
 		}
 		break;
 	    default:
-		throw new Exception("This should never happen.  Error in ParserBuilder::parseRules()");
+		throw new \Exception("This should never happen.  Error in ParserBuilder::parseRules()");
 	    }
 	}
 	foreach ($rhs as $i => $rule) {
@@ -490,9 +498,9 @@ abstract class ParserBuilder extends AbstractBuilder
 	    $rules = substr($matches[1], 1, -1);
 	    $body = str_replace($line, '', $source);
 	} elseif ($found === false) {
-	    throw new Exception("Fatal regexp error");
+	    throw new \Exception("Fatal regexp error");
 	} else {
-            throw new Exception('No Rule found!');
+            throw new \Exception('No Rule found!');
 	}
 	return array($body, $rules);
     }

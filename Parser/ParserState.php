@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 class ParserState
 {
@@ -161,7 +162,7 @@ class ParserState
 	    assert($parser instanceof AbstractParser);
 	    $result = $parser->$reduction($tokens);
 	} else {
-	    throw new Exception('Reduction is not callable error.');
+	    throw new \Exception('Reduction is not callable error.');
 	}
 	return $result;
     }
@@ -279,7 +280,7 @@ class ParserState
 		$child = $last->getRank();
 		break;
 	    default:
-		throw new Exception('Associativity Error: neither left nor right (' . $assoc .')');
+		throw new \Exception('Associativity Error: neither left nor right (' . $assoc .')');
 	    }
 	    foreach ($child as $val) {
 		$result[] = $val;

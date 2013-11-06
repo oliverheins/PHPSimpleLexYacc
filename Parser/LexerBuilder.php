@@ -5,6 +5,7 @@
  * @copyright 2013 Oliver Heins <oheins@sopos.org>
  * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
  */
+namespace PHPSimpleLexYacc\Parser;
 
 require_once("TokensBase.php");
 require_once("AbstractBuilder.php");
@@ -12,6 +13,12 @@ require_once("Generators/MethodGenerator.php");
 require_once("Generators/TokenGenerator.php");
 require_once("Generators/ClassGenerator.php");
 require_once("Generators/PropertyGenerator.php");
+
+use PHPSimpleLexYacc\Parser\Generators\MethodGenerator;
+use PHPSimpleLexYacc\Parser\Generators\TokenGenerator;
+use PHPSimpleLexYacc\Parser\Generators\ClassGenerator;
+use PHPSimpleLexYacc\Parser\Generators\PropertyGenerator;
+
 
 /** LexerBuilder class
  *
@@ -143,7 +150,8 @@ abstract class LexerBuilder extends AbstractBuilder
 	$this->extractCode();
 
 	ob_start();
-	echo '<?php' . "\n\n"
+	echo '<?php' . "\n"
+            . 'namespace PHPSimpleLexYacc\Parser;' . "\n\n"
 	    . 'require_once("AbstractLexer.php");' . "\n\n";
 
 	$class = new ClassGenerator(array('name' => $lexername,
@@ -249,7 +257,7 @@ abstract class LexerBuilder extends AbstractBuilder
 	// We have two base classes (LexerBuilder and AbstractBuilder), 
 	// which need to be excluded.  So $grandpa is our base to start 
 	// reflecting.
-	$object = new ReflectionObject($this);
+	$object = new \ReflectionObject($this);
 	$parent = $object->getParentClass();
 	while ($ancestor = $parent->getParentClass()) {
 	    $grandpa = $parent;
@@ -336,7 +344,7 @@ abstract class LexerBuilder extends AbstractBuilder
 	$objectProperties = $object->getProperties();
 	$defaultProperties = $object->getDefaultProperties();
 
-	$reflection = new ReflectionClass($this);
+	$reflection = new \ReflectionClass($this);
 	$templateMethod = $reflection->getMethod('tokenMethodTemplate');
 
 	foreach ($objectProperties as $prop) {
@@ -348,7 +356,7 @@ abstract class LexerBuilder extends AbstractBuilder
 
 	    $className = $prop->getDeclaringClass()->getName();
 	    $classhierarchy = $this->getLevelForClass($className);
-	    $classFile = new SplFileObject($prop->getDeclaringClass()->getFileName());
+	    $classFile = new \SplFileObject($prop->getDeclaringClass()->getFileName());
 
 	    foreach ($classFile as $line => $content) {
 		if (preg_match('/(private|protected|public|var)\s\$'.$propName.'/x', $content)) {
@@ -412,7 +420,7 @@ abstract class LexerBuilder extends AbstractBuilder
 	}
 
 //	if (count($tokens) != count($this->getTokens())) {
-//	    throw new Exception("Token not defined");
+//	    throw new \Exception("Token not defined");
 //	}
 
 

@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 abstract class CodeGenerator
 {
@@ -27,7 +28,7 @@ abstract class CodeGenerator
 	return $this->reflection;
     }
 
-    public function setReflection(Reflector $reflection)
+    public function setReflection(\Reflector $reflection)
     {
 	$this->reflection = $reflection;
     }

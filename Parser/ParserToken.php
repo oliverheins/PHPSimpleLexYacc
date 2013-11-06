@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 require_once("Token.php");
 
@@ -20,7 +21,7 @@ class ParserToken
 	        break;
 	      
 	    default:
-		throw new Exception('Token has no propety named ' . $key);
+		throw new \Exception('Token has no propety named ' . $key);
 	    }
 	}
     }

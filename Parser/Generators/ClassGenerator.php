@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MethodGenerator.php");
 require_once("PropertyGenerator.php");
@@ -25,7 +26,7 @@ class ClassGenerator extends CodeGenerator
 		$this->$f($value);
 		break;
 	    default:
-		throw new Exception("Class has no property named " . $key);
+		throw new \Exception("Class has no property named " . $key);
 	    }
 	}
     }

@@ -1,5 +1,8 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
+
 require_once("Helpers/SimpleIndenter.php");
+use PHPSimpleLexYacc\Parser\Helpers\SimpleIndenter;
 
 abstract class AbstractBuilder
 {
@@ -71,7 +74,7 @@ abstract class AbstractBuilder
 	assert($classname != '');
 	assert(is_int($n));
 	assert($n >= 1);
-	$this->classhierarchy[$classname] = $n;
+	$this->classhierarchy[str_replace('\\', '', $classname)] = $n;
     }
 
     /** Returns the whole class hierarchy table
@@ -95,6 +98,7 @@ abstract class AbstractBuilder
     protected function getLevelForClass($classname)
     {
 	assert(is_string($classname));
+	$classname = str_replace('\\', '', $classname);
 	if (isset($this->classhierarchy[$classname])) { 
 	    return $this->classhierarchy[$classname];
 	}
@@ -112,34 +116,34 @@ abstract class AbstractBuilder
      */
     protected function useCache($filename)
     {
-        if (isset($this->debug)) { return false; }
-
 	$usecache = false;
-	if (@file_exists($filename)) {
-	    $object = new ReflectionObject($this);
-	    $classlevel = 1;
-	    $newestfiletime = 0;
-	    while (true) { // traverse all parents of the lexer
-			   // definition and get the latest
-			   // modification time
-		$classfile = $object->getFileName();
-		$classname = $object->getName(); // Build class hierarchy
-		$this->addClasshierarchy($classname, $classlevel);
-		$classlevel++;
-		$filetime = @filemtime($classfile);
-		$newestfiletime = $filetime > $newestfiletime ? $filetime : $newestfiletime;
-		if ($ancestor = $object->getParentClass()) {
-		    $object = $ancestor;
-		} else {
-		    break;
-		}
-	    }
-	    // Use cache only if the cached file is newer than the
-	    // last modification
-	    if ($newestfiletime < @filemtime($filename)) {
-		$usecache = true;
-	    }
+        $object = new \ReflectionObject($this);
+        $classlevel = 1;
+        $newestfiletime = 0;
+        while (true) { // traverse all parents of the lexer
+	    // definition and get the latest
+	    // modification time
+            $classfile = $object->getFileName();
+            $classname = $object->getName(); // Build class hierarchy
+            $this->addClasshierarchy($classname, $classlevel);
+            $classlevel++;
+            $filetime = @filemtime($classfile);
+            $newestfiletime = $filetime > $newestfiletime ? $filetime : $newestfiletime;
+            if ($ancestor = $object->getParentClass()) {
+                $object = $ancestor;
+            } else {
+                break;
+            }
+        }
+	// if debug is on, we create the file
+	if (isset($this->debug)) { 
+	    return false; 
 	}
+	// Use cache only if the cached file is newer than the
+	// last modification
+        if (@file_exists($filename) && $newestfiletime < @filemtime($filename)) {
+            $usecache = true;
+        }
 	return $usecache;
     }
     /** Returns the generated Lexer/Parser
@@ -158,7 +162,7 @@ abstract class AbstractBuilder
     {
 	assert(is_string($type) && $type != '' && is_string($name) && $name != '');
 	if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_]*\Z/', $name)) {
-	    throw new Exception($type . " must be a valid PHP classname.");
+	    throw new \Exception($type . " must be a valid PHP classname.");
 	}
 	$dir = 'Parser/';
 	$filename = $dir . $name . '.php';
@@ -170,9 +174,10 @@ abstract class AbstractBuilder
 	    $indenter->process();
 	    $parser = $indenter->getResult();
 	    if (!file_put_contents($filename, $parser)) {
-		throw new Exception("Can't write " . $filename);
+		throw new \Exception("Can't write " . $filename);
 	    }
 	}
+	$name = 'PHPSimpleLexYacc\\Parser\\' . $name;
 	require_once($filename);
 	return new $name();
     }

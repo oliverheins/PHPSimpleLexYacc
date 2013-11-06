@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 class Token
 {
@@ -20,7 +21,7 @@ class Token
 	       $this->$key = $value;
 	       break;
 	   default:
-	       throw new Exception('Token has no property named ' . $key);
+	       throw new \Exception('Token has no property named ' . $key);
 	   }
 	}
     }

@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MemberGenerator.php");
 
@@ -31,7 +32,7 @@ class MethodGenerator extends MemberGenerator
 		$this->$f($value);
 		break;
 	    default:
-		throw new Exception("Method has no property " . $key);
+		throw new \Exception("Method has no property " . $key);
 	    }
 	}
     }

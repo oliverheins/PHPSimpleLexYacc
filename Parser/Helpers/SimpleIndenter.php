@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Helpers;
 
 class SimpleIndenter
 {
@@ -34,7 +35,7 @@ class SimpleIndenter
     {
 	assert(is_string($this->data));
 	if (strlen($this->data) == 0) {
-	    throw new Exception('SimpleIndenter has to be initialized with some amount of data to indent.');
+	    throw new \Exception('SimpleIndenter has to be initialized with some amount of data to indent.');
 	}
 	$lines = explode("\n", $this->data);
 	$this->result = array();

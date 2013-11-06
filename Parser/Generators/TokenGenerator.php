@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MethodGenerator.php");
 
@@ -34,7 +35,7 @@ class TokenGenerator extends MethodGenerator
 		$this->$f($value);
 		break;
 	    default:
-		throw new Exception("Method has no property " . $key);
+		throw new \Exception("Method has no property " . $key);
 	    }
 	}
     }
@@ -61,7 +62,7 @@ class TokenGenerator extends MethodGenerator
 	    $regexp = $matches[1];
 	    $body = str_replace($line, '', $body);
 	} elseif ($found === false) {
-	    throw new Exception("Fatal regexp error");
+	    throw new \Exception("Fatal regexp error");
 	} else {
 	    $regexp = '//';
 	}

@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MemberGenerator.php");
 
@@ -22,7 +23,7 @@ class PropertyGenerator extends MemberGenerator
 		$this->$f($value);
 		break;
 	    default:
-		throw new Exception("Property has no property named " . $key);
+		throw new \Exception("Property has no property named " . $key);
 	    }
 	}
     }
@@ -108,13 +109,13 @@ class PropertyGenerator extends MemberGenerator
 	    return "'" . $result . "'";
 	case 'object':
 	case 'resource':
-	    throw new Exception(ucfirst($type) . "s are not (yet) implemented.  Don't use them now, but file a bug report if you really need them.");
+	    throw new \Exception(ucfirst($type) . "s are not (yet) implemented.  Don't use them now, but file a bug report if you really need them.");
 	    break;
 	case 'unknown type':
-	    throw new Exception($type . ' is not a valid type, check your source.');
+	    throw new \Exception($type . ' is not a valid type, check your source.');
 	    break;
 	default:
-	    throw new Exception('This should not happen, consider this a bug: type '. $type . ' is unknown, but should be known. :(');
+	    throw new \Exception('This should not happen, consider this a bug: type '. $type . ' is unknown, but should be known. :(');
 	}
     }
 

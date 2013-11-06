@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser;
 
 require_once("Token.php");
 
@@ -112,7 +113,7 @@ abstract class AbstractLexer
 	if (is_string($state) and $state != '' and array_key_exists($state, $this->statelist)) {
 	    $this->currentstate = $state;
 	} else {
-	    throw new Exception('No state ' . $state . ' defined!');
+	    throw new \Exception('No state ' . $state . ' defined!');
 	}
     }
 

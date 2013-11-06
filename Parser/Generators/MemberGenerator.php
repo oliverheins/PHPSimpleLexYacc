@@ -1,4 +1,5 @@
 <?php
+namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("CodeGenerator.php");
 
@@ -33,7 +34,7 @@ abstract class MemberGenerator extends CodeGenerator
 	    case (''):
 		break;
 	    default:
-		throw new Exception("Keyword not allowed: " . $key);
+		throw new \Exception("Keyword not allowed: " . $key);
 	    }
 	}
 	$this->visibility = $visibility;
