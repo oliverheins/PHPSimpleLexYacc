@@ -96,7 +96,7 @@ class ParserState
      * @var string
      * @see ParserState::getHistory()
      */
-    private $history;
+    private $cache = array();
     
     /** Constructor
      * 
@@ -127,6 +127,7 @@ class ParserState
 	    $this->setRule($rule);
 	}
 	$this->setContainer($container);
+        $this->cache['history'] = null;
     }
 
     /** Setter method for the container
@@ -604,8 +605,8 @@ class ParserState
     public function getHistory()
     {
 	$tokens = $this->getAb();
-        if (count($this->history) == 2 && $this->history[0] == count($tokens)) {
-            return $this->history;
+        if (count($this->cache['history']) == 2 && $this->cache['history'][0] == count($tokens)) {
+            return $this->cache['history'];
         }
 	$result = "";
 	foreach ($tokens as $t) {
@@ -616,7 +617,7 @@ class ParserState
 	    }
 	    $result .= " ";
 	}
-        $this->history = array(count($tokens), $result);
+        $this->cache['history'] = array(count($tokens), $result);
 	return $result;
     }
 
