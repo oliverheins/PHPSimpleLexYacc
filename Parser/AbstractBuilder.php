@@ -1,9 +1,20 @@
 <?php
+/** Builder module of PhpSimpleLexCC
+ *
+ * @package Builder
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
 namespace PHPSimpleLexYacc\Parser;
 
 require_once("Helpers/SimpleIndenter.php");
 use PHPSimpleLexYacc\Parser\Helpers\SimpleIndenter;
 
+/** AbstractBuilder class
+ *
+ * Abstract class used by LexerBuilder and ParserBuilder.
+ */
 abstract class AbstractBuilder
 {
     /** List of properties
@@ -11,7 +22,7 @@ abstract class AbstractBuilder
      * Holds all the properties of the lexer/parser definition that
      * don't define any token/rule
      *
-     * @type array
+     * @var array
      */
     protected $properties = array();
 
@@ -20,7 +31,7 @@ abstract class AbstractBuilder
      * Holds all the methods of the lexer/parser definition that are
      * immedialitely related to the token/rule definition.
      *
-     * @type array
+     * @var array 
      */
     protected $innerMethods = array();
 
@@ -29,7 +40,7 @@ abstract class AbstractBuilder
      * Holds all the methods of the lexer/parser definition that don't
      * define any token/rule.
      *
-     * @type array
+     * @var array
      */
     protected $extraMethods = array();
 
@@ -38,9 +49,8 @@ abstract class AbstractBuilder
      * Maps a filename to the class hierarchy: 
      * child -> parent =~ 1 -> 2
      *
-     * @type array
-     * @see LexerBuilder::addClasshierarchy()
-     * @see LexerBuilder::getClasshierarchy()
+     * @var array
+     * @see LexerBuilder::addClasshierarchy(), LexerBuilder::getClasshierarchy()
      */
     private $classhierarchy = array();
 
@@ -50,16 +60,10 @@ abstract class AbstractBuilder
      * 1: on
      * 2: verbose
      * 
-     * @var type int
+     * @var int
      */
     protected $debug = 0;
     
-    /** Constructor
-     *
-     * @abstract
-     */
-    abstract public function __construct();
-
     /** Adds a class to the class hierarchy
      * 
      * An integer value correspending to the nesting level is added.
@@ -67,6 +71,7 @@ abstract class AbstractBuilder
      * @param string $classname  The name of the class
      * @param int    $n          The nesting level
      * @see LexerBuilder::$classhierarchy
+     * @return void
      */
     protected function addClasshierarchy($classname, $n)
     {
@@ -79,7 +84,7 @@ abstract class AbstractBuilder
 
     /** Returns the whole class hierarchy table
      *
-     * @return array
+     * @return array  the class hierarchy table
      * @see LexerBuilder::$classhierarchy
      */
     protected function getClasshierarchy()
@@ -92,8 +97,7 @@ abstract class AbstractBuilder
     /** Returns the level of a class in the class hierarchy
      *
      * @param  string $classname  The name of the class
-     * @return int    The level of the class in the class hierarchy 
-     * @return false  if class is not in the hierarchy
+     * @return int|boolean  The level of the class in the class hierarchy, or false if the class is not in the hierarchy 
      */
     protected function getLevelForClass($classname)
     {
@@ -111,8 +115,8 @@ abstract class AbstractBuilder
      * its class definition files.  In addition, if
      * AbstractBuilder::$debug is true, returns false.
      *
-     * @param  string $filename;
-     * @return bool   true if cache is up-to-date, false otherwise 
+     * @param  string $filename
+     * @return boolean true if cache is up-to-date, false otherwise 
      */
     protected function useCache($filename)
     {
@@ -146,6 +150,7 @@ abstract class AbstractBuilder
         }
 	return $usecache;
     }
+    
     /** Returns the generated Lexer/Parser
      *
      * Checks if the lexer/parser definition was changed recently. If
@@ -153,9 +158,9 @@ abstract class AbstractBuilder
      * Also builds the class hierarchy.
      *
      * @access protected
+     * @param  string $type       "Lexer" or "Parser"
      * @param  string $name       The name of the build (must be a valid classname)
-     * @return AbstractLexer      The generated Lexer
-     * @return AbstractParser     The generated Parser
+     * @return AbstractLexer|AbstractParser The generated Lexer resp. Parser
      * @see                       AbstractBuilder::createBuild()
      */
     protected function getBuild($type, $name)
@@ -185,6 +190,9 @@ abstract class AbstractBuilder
     /** Abstract function for the concrete creator
      *
      * Must implement the concrete creator
+     * 
+     * @abstract
+     * @param string $name Classname
      */
     abstract protected function createBuild($name);
 

@@ -1,13 +1,13 @@
 <?php
-/** Lexing module of PhpSimpleLexCC
+/** Builder module of PhpSimpleLexCC
  *
+ * @package Builder
  * @author    Oliver Heins 
  * @copyright 2013 Oliver Heins <oheins@sopos.org>
  * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
  */
 namespace PHPSimpleLexYacc\Parser;
 
-require_once("TokensBase.php");
 require_once("AbstractBuilder.php");
 require_once("Generators/MethodGenerator.php");
 require_once("Generators/TokenGenerator.php");
@@ -58,6 +58,13 @@ abstract class LexerBuilder extends AbstractBuilder
      */
     private $inclusivestates = array();
 
+    /** Constructor
+     *
+     * @abstract
+     * @return void
+     */
+    abstract public function __construct();
+    
     /** Sets the tokens array
      *
      * @access protected
@@ -140,9 +147,7 @@ abstract class LexerBuilder extends AbstractBuilder
      *
      * @access private
      * @param  string $lexername    The name of the lexer (must be a valid classname).
-     * @see    LexerBuilder::extractCode() for the actual parsing of the lexer definition.
-     * @see    LexerBuilder::$innerMethods for the stored lexing methods.
-     * @see    LexerBuilder::$extraMethods for the rest of the methods.
+     * @see    LexerBuilder::extractCode(), LexerBuilder::$innerMethods, LexerBuilder::$extraMethods
      * @return string $lexer        The code of the created lexer.
      */
     private function createLexer($lexername)
@@ -227,9 +232,7 @@ abstract class LexerBuilder extends AbstractBuilder
      * LexerBuilder::$innerMethods.
      *
      * @access private
-     * @see    AbstractBuilder::$classhierarchy for the class hierarchy
-     * @see    LexerBuilder::$innerMethods   for the stored lexing methods.
-     * @see    LexerBuilder::$extraMethods   for the rest of the methods.
+     * @see    AbstractBuilder::$classhierarchy, LexerBuilder::$innerMethods, LexerBuilder::$extraMethods
      */
     private function extractCode() 
     {

@@ -1,4 +1,11 @@
 <?php
+/** Parser module of PhpSimpleLexCC
+ *
+ * @package Parser
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
 namespace PHPSimpleLexYacc\Parser;
 
 require_once("ParserRule.php");
@@ -6,14 +13,63 @@ require_once("ParserState.php");
 require_once("ParserChart.php");
 require_once("ParserToken.php");
 
+/** core parser class
+ * 
+ * The core functions of the parser.
+ * 
+ * @abstract
+ */
 abstract class AbstractParser
 {
+    /** the list of grammar rules
+     *
+     * @var array
+     * @see AbstractParser::setGrammar()
+     */
     private $grammar;
+    
+    /** the chart table
+     *
+     * @var PHPSimpleLexYacc\Parser\ParserChart 
+     * @see AbstractParser::printChart()
+     */
     private $chart;
+    
+    /** the grammar rule with which parsing starts
+     *
+     * @var PHPSimpleLexYacc\Parser\ParserRule
+     * @see AbstractParser::setGrammar()
+     */
     private $start_rule;
+    
+    /** the list of complex points
+     *
+     * A complex point is a rule, at which a symbol occurs only on rhs, not on 
+     * lhs.  At this point, not only reduction is possible, but also the removal
+     * of abiguousity.
+     * 
+     * @var array
+     * @see AbstractParser::setComplexPoints(), AbstractParser::setComplexPoint() 
+     */
     private $complex;
-    private $debuglevel = 0;
+    
+    /** the debug level
+     *
+     * 0: no debug output, 1: some debug output, 2: verbose debug output
+     * 
+     * @var int
+     * @see AbstractParser::getDebugLevel(), AbstractParser::setDebugLevel() 
+     */
+    protected $debuglevel = 0;
 
+    /** Returns the list of states which are considered final
+     * 
+     * A state is considered final when it is a) in the last chart, and b) 
+     * equals the start rule.  That means the parser ran successfully, and the
+     * state represents that successful run.
+     * 
+     * @return array
+     */
     public function getFinalStates()
     {
 	if ($this->start_rule === Null) {
@@ -21,17 +77,23 @@ abstract class AbstractParser
 	}
 
 	$result = array();
-
 	$chart = $this->chart->last();
 	foreach ($chart as $state) {
 	    if ($state->equal($this->start_rule)) {
 		$result[] = $state;
 	    }
 	}
-
 	return $result;
     }
 
+    /** Sets the grammar
+     * 
+     * Asserts that $grammar is a list of ParserRules
+     * 
+     * @param array $grammar
+     * @return void
+     * @see AbstractParser::grammar, PHPSimpleLexYacc\Parser\ParserRule
+     */
     protected function setGrammar(array $grammar)
     {
 	assert(count($grammar) > 0);
@@ -323,9 +385,9 @@ abstract class AbstractParser
 
     private function printChart($tokens)
     {
-	for ($zz = 0; $zz < count($tokens); $zz++) {
-	    echo "== chart " . $zz . "<br>\n";
-	    foreach ($this->chart->get($zz) as $state) {
+	for ($n = 0; $n < count($tokens); $n++) {
+	    echo "== chart " . $n . "<br>\n";
+	    foreach ($this->chart->get($n) as $state) {
 		$x  = $state->getX();
 		$ab = $state->getAb();
 		$cd = $state->getCd();
@@ -340,6 +402,9 @@ abstract class AbstractParser
 		    echo $sym->getType() . " ";
 		}
 		echo "from " . $j . " (" . $val . ")<br>\n";
+		if (count($state->getContainer()) != 0) {
+		    var_dump($state->getContainer());
+		}
 	    }
 	}
 	echo "<hr>\n";

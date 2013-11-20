@@ -1,12 +1,33 @@
 <?php
+/** Generator module of PhpSimpleLexYacc
+ *
+ * @package generator
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
+
 namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MemberGenerator.php");
 
+/** Class to generate properties
+ */
 class PropertyGenerator extends MemberGenerator
 {
+    /** default value
+     *
+     * @var mixed
+     */
     protected $value = null;
 
+    /** Constructor
+     * 
+     * @param array $parameters A key=>value list of the parameters
+     * @see PropertyGenerator::setName(), PropertyGenerator::setReflection(), PropertyGenerator::setDocstring(), PropertyGenerator::setStatic(), PropertyGenerator::setPublic(), PropertyGenerator::setProtected(), PropertyGenerator::setPrivate(), PropertyGenerator::setFinal(), PropertyGenerator::setValue() 
+     * @return void
+     * @throws \Exception
+     */
     public function __construct(array $parameters = array()) {
 	foreach ($parameters as $key => $value) {
 	    switch ($key) {
@@ -28,6 +49,13 @@ class PropertyGenerator extends MemberGenerator
 	}
     }
 
+    /** Generates the code for the property
+     * 
+     * In addition, the code is set with setCode()
+     * 
+     * @see PropertyGenerator::setCode(), PropertyGenerator::isFinal(), PropertyGenerator::isPublic(), PropertyGenerator::isPrivate(), PropertyGenerator::isProtected(), PropertyGenerator::isStatic(), PropertyGenerator::getValue(), PropertyGenerator::genValue()
+     * @return string
+     */
     public function generateCode()
     {
 	$code = '';
@@ -60,6 +88,12 @@ class PropertyGenerator extends MemberGenerator
 	return $code;
     }
 
+    /** Generate the string representation of the properties value
+     * 
+     * @param mixed $value
+     * @return string
+     * @throws \Exception
+     */
     private function genValue($value)
     {
 	// FIXME: This method is an exact duplicate of
@@ -119,11 +153,22 @@ class PropertyGenerator extends MemberGenerator
 	}
     }
 
+    /** Sets the value of the property
+     * 
+     * @see PropertyGenerator::value
+     * @return void
+     * @param mixed $value
+     */
     public function setValue($value)
     {
 	$this->value = $value;
     }
 
+    /** Returns the value of the property
+     * 
+     * @return mixed
+     * @see PropertyGenerator::value
+     */
     public function getValue()
     {
 	return $this->value;

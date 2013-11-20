@@ -1,4 +1,11 @@
 <?php
+/** Builder module of PhpSimpleLexCC
+ *
+ * @package   Builder
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license   GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
 namespace PHPSimpleLexYacc\Parser;
 
 require_once("AbstractBuilder.php");
@@ -14,17 +21,21 @@ use PHPSimpleLexYacc\Parser\Generators\MethodGenerator;
 use PHPSimpleLexYacc\Parser\Generators\PropertyGenerator;
 use PHPSimpleLexYacc\Parser\Generators\ClassGenerator;
 
+/** ParserBuilder class
+ *
+ * Builds the parser from a definiton.
+ */
 abstract class ParserBuilder extends AbstractBuilder
 {
     /** Holds the parsing rules
      *
-     * @type ParserRules
+     * @var ParserRules
      */
     private $rules;
 
     /** The parent class of the parser definition, i.e. this class
      *
-     * @type ReflectionClass
+     * @var ReflectionClass
      */
     private $parent;
 
@@ -32,7 +43,7 @@ abstract class ParserBuilder extends AbstractBuilder
      *
      * The parent of this class, i.e. AbstractBuilder
      *
-     * @type ReflectionClass
+     * @var ReflectionClass
      */
     private $grandpa;
 
@@ -43,7 +54,7 @@ abstract class ParserBuilder extends AbstractBuilder
      * The higher the precedence level, the lower its actual
      * precedence is.
      *
-     * @type array
+     * @var array
      */
     private $precedence = array();
 
@@ -51,7 +62,7 @@ abstract class ParserBuilder extends AbstractBuilder
      *
      * cp[ambiguous symbol] => [no of rule, pos]
      *
-     * @type array
+     * @var array
      */
     private $complexpoints;
 
@@ -60,7 +71,7 @@ abstract class ParserBuilder extends AbstractBuilder
      * Asserts that the parameter is a list of arrays, each containing
      * only strings.
      *
-     * @param array
+     * @param array $precedence    the precedence rules
      */
     protected function setPrecedence(array $precedence)
     {
@@ -85,6 +96,23 @@ abstract class ParserBuilder extends AbstractBuilder
 	}
     }
 
+    /** Constructor, empty for just being there
+     *
+     * Otherwise, the constructor of the ParserRules would be added.
+     */
+    public function __construct() {}
+
+    /** Calculates the "complex points"
+     * 
+     * A complex point is a rule, at which a symbol occurs only on rhs, not on 
+     * lhs.  At this point, not only reduction is possible, but also the removal
+     * of abiguousity.  This method calculates the complex points for may be
+     * ambiguous rules and stores them in as an array in 
+     * ParserBuilder::complexpoints.
+     * 
+     * @return void
+     * @see ParserBuilder::complexpoints
+     */
     private function calculateComplexPoints()
     {
 	$rules = $this->rules->getRules();
@@ -157,6 +185,9 @@ abstract class ParserBuilder extends AbstractBuilder
     /** Wrapper function for the concrete creator
      *
      * Calls the concrete creator method
+     * 
+     * @param string $name the filename of the parser
+     * @return string The code of the created parser
      */
     protected function createBuild($name)
     {
@@ -173,7 +204,7 @@ abstract class ParserBuilder extends AbstractBuilder
      * @see    ParserBuilder::extractCode() for the actual parsing of the lexer definition.
      * @see    ParserBuilder::$reductionMethods for the stored parser reduction methods.
      * @see    ParserBuilder::$extraMethods     for the rest of the methods.
-     * @return string $parser        The code of the created parser.
+     * @return string            The code of the created parser.
      */
     protected function createParser($parsername)
     {
@@ -191,7 +222,7 @@ abstract class ParserBuilder extends AbstractBuilder
 	    $class->addProperty($prop);
 	}
 
-	$constructcode = $this->rules->generateCode($this->innerMethods);
+	$constructcode = $this->rules->generateCode();
 	$constructcode .= $this->generateComplexPointCode();
 	$c = new MethodGenerator(array('name'   => '__construct',
 				       'source' => $constructcode,
@@ -213,6 +244,11 @@ abstract class ParserBuilder extends AbstractBuilder
 	return $parser;
     }
 
+    /** Returns the code for setting the complex points
+     * 
+     * @return string
+     * @see ParserBuilder::genValue()
+     */
     private function generateComplexPointCode()
     {
 	assert(is_array($this->complexpoints));
@@ -223,6 +259,16 @@ abstract class ParserBuilder extends AbstractBuilder
 	return $code;
     }
 
+    /** Generic method to generate code from data structures
+     * 
+     * According to the type of $value, a data structure is turned into php 
+     * code.  Works with boolean, double, float, integer and recursively on 
+     * arrays.  Fails with objects and resources.
+     * 
+     * @param mixed $value
+     * @return string
+     * @throws \Exception
+     */
     private function genValue($value)
     {
 	// FIXME: This method is an exact duplicate of
@@ -280,6 +326,16 @@ abstract class ParserBuilder extends AbstractBuilder
 	}
     }
 
+    /** Main method to extract the code of the concrete ParserBuilder class
+     * 
+     * First, sets this class and its parent class, AbstractBuilder, as not 
+     * interesting.  Then gets all methods and but only keeps the interesting, 
+     * which are processed.  Calls calculateComplexPoints(), and gets the
+     * interesting properties, which are processed.
+     * 
+     * @see ParserBuilder::getInteresting(), ParserBuilder::processMethods(), ParserBuilder::processProperties(), ParserBuilder::calculateComplexPoints()
+     * @return void
+     */
     protected function extractCode()
     {
 	// Setting up Reflecting Class and Base Class
@@ -309,7 +365,18 @@ abstract class ParserBuilder extends AbstractBuilder
 	$this->processProperties($interesting, $defaultProperties);
     }
 
-    private function getInteresting($members)
+    /** Checks which methods/properties are interesting
+     * 
+     * Checks whether a method/property is already defined in parent or 
+     * grandparent (i.e. this class or its parent class, AbstractBuilder).
+     * If not, it is considered interesting.
+     * 
+     * @param array $members
+     * @return array list of interesting methods/properties
+     * @throws \Exception
+     * @see ParserBuilder::parent, ParserBuilder::grandpa
+     */
+    private function getInteresting(array $members)
     {
 	$interesting = array();
 	foreach ($members as $member) {
@@ -332,6 +399,16 @@ abstract class ParserBuilder extends AbstractBuilder
 	return $interesting;
     }
 
+    /** Adds a list of properties to the main property list
+     * 
+     * Adds a list of properties and their corresponding values to the main 
+     * properties list.
+     * 
+     * @see PHPSimpleLexYacc\Parser\Generators\ProperyGenerator::__construct()
+     * @param array $interesting
+     * @param array $default
+     * @return void
+     */
     private function processProperties($interesting, $default)
     {
 	foreach ($interesting as $prop) {
@@ -351,6 +428,18 @@ abstract class ParserBuilder extends AbstractBuilder
 	}
     }
 
+    /** Adds a list of properties to the main property list
+     * 
+     * Extracts the relevant portion from the source file.  If the method has 
+     * the form of /p_[a-zA-Z]+/, it is considered an inner method, i.e. a 
+     * method containing a rule.  The rule is extracted then, and the method 
+     * added to the innerMethods list.  Otherwise, the method is added to the
+     * extraMethods list.
+     * 
+     * @see PHPSimpleLexYacc\Parser\Generators\MethodGenerator::_construct(), ParserBuilder::extractBody(), ParserBuilder::addRules(), ParserBuilder::innerMethods, ParserBuilder::extraMethods
+     * @param array $interesting
+     * @return void
+     */
     private function processMethods($interesting)
     {
 	$this->rules = new ParserRules();
@@ -405,6 +494,17 @@ abstract class ParserBuilder extends AbstractBuilder
 	}
     }
 
+   /** Adds the rules to the rule table
+    * 
+    * Lexes the rules, then parses it with an ad hoc parser.  Care of 
+    * precedence rules is taken Finally adds them to the rule table.
+    * 
+    * @see PHPSimpleLexYacc\Parser\RuleLexingRules::__construct(), ParserBuilder::precedence, ParserBuilder::rules
+    * @param string $string
+    * @param string $methodName
+    * @throws \Exception
+    * @return void
+    */
     private function addRules($string, $methodName)
     {
 	assert(is_string($string) && is_string($methodName));
@@ -413,12 +513,9 @@ abstract class ParserBuilder extends AbstractBuilder
 	$lexer->setData($string);
 	$lexer->lex();
 	$tokens = $lexer->getTokens();
-	$this->parseRules($tokens, $methodName);
-    }
 
-    private function parseRules(array $tokens, $methodName)
-    {
-	$state = 0; // 0: set LHS, 1: set RHS
+        // Parse the rules
+        $state = 0; // 0: set LHS, 1: set RHS
 	$rhs = array();
 	$precedence = array();
 	$i = 0; // counter for the rules
@@ -488,6 +585,12 @@ abstract class ParserBuilder extends AbstractBuilder
 	}
     }
 
+    /** Extracts the Rules out of a method definition
+     * 
+     * @param string $source
+     * @return array Holds two strings: the stripped off body and the rules
+     * @throws \Exception
+     */
     private function extractRules($source)
     {
 	// Extract the regexp

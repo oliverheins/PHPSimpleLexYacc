@@ -1,20 +1,113 @@
 <?php
+/** Parser module of PhpSimpleLexCC
+ *
+ * @package Parser
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
 namespace PHPSimpleLexYacc\Parser;
 
+require_once('Helpers/ContainerArray.php');
+use PHPSimpleLexYacc\Parser\Helpers\ContainerArray;
+
+/** holds a state of the parser
+ * 
+ */
 class ParserState
 {
-    // x -> ab . cd from j
+    /** x -> ab . cd from j
+     *
+     * @var PHPSimpleLexYacc\Parser\ParserToken
+     * @see ParserState::getX(), ParserState::setX()
+     */
     private $x;
-    private $ab;
-    private $cd;
-    private $j;
-    private $rule;
-    private $reduction;
-    private $value;
-    private $shifts;
-    private $processed;
 
-    public function __construct($x, array $ab, array $cd, $j, $rule = null)
+    /** x -> ab . cd from j
+     *
+     * @var array
+     * @see ParserState::getAb(), ParserState::setAb()
+     */
+    private $ab;
+
+    /** x -> ab . cd from j
+     *
+     * @var array
+     * @see ParserState::getCd(), ParserState::setCd()
+     */
+    private $cd;
+    
+    /** x -> ab . cd from j
+     *
+     * @var int
+     * @see ParserState::getJ(), ParserState::setJ()
+     */
+    private $j;
+
+    /** holds the rule
+     *
+     * @var PHPSimpleLexYacc\Parser\ParserRule
+     * @see ParserState::getRule(), ParserState::setRule()
+     */
+    private $rule;
+    
+    /** holds a link to the reduction method
+     * 
+     * Either a closure or a string referencing a method.
+     *
+     * @var callable|string
+     * @see ParserState::setReduction()
+     */
+    private $reduction;
+    
+    /** holds the value of the state
+     *
+     * @var mixed
+     * @see ParserState::getValue(), ParserState::setValue()
+     */
+    private $value;
+
+    /** holds the list of shifts associated with this state
+     *
+     * @var array
+     * @see ParserState::, getShifts(), ParserState::addShift(), ParserState::shifts()
+     */
+    private $shifts;
+    
+    /** already processed?
+     *
+     * @var boolean
+     * @see ParserState::getProcessed(), ParserState::setProcessed()
+     */
+    private $processed;
+    
+    /** holds the container of the state
+     * 
+     * the container is user accessible on a per state base, i.e. can be
+     * used to simulate states.
+     *
+     * @var array
+     * @see ParserState::getContainer(), ParserState::setContainer(), ParserState::cloneContainer()
+     */
+    private $container;
+    
+    /** the cached history of the state
+     *
+     * @var string
+     * @see ParserState::getHistory()
+     */
+    private $history;
+    
+    /** Constructor
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserToken $x x -> ab . cd from j
+     * @param array $ab x -> ab . cd from j
+     * @param cd $cd x -> ab . cd from j
+     * @param int $j x -> ab . cd from j
+     * @param \PHPSimpleLexYacc\Parser\ParserRule $rule the associated rule
+     * @param array $container the container
+     */
+    public function __construct($x, array $ab, array $cd, $j, $rule = null, $container = array())
     {
 	assert($x instanceof ParserToken);
 	assert(is_array($ab));
@@ -33,23 +126,121 @@ class ParserState
 	if ($rule !== null) {
 	    $this->setRule($rule);
 	}
+	$this->setContainer($container);
     }
 
+    /** Setter method for the container
+     * 
+     * @param array $container
+     * @return void
+     * @see ParserState::container, ParserState::getContainer(), ParserState::cloneContainer()
+     */
+    protected function setContainer(array $container)
+    {
+	$this->container = $container;
+    }
+
+    /** Getter method for the container
+     * 
+     * @return array
+     * @see ParserState::container, ParserState::setContainer(), ParserState::cloneContainer()
+     */
+    public function getContainer()
+    {
+	return $this->container;
+    }
+
+    /** Makes a deep copy of the container
+     * 
+     * @return array
+     * @see ParserState::container, ParserState::getContainer(), ParserState::setContainer(), ParserState::deepCopy()
+     */
+    public function cloneContainer()
+    {
+	return $this->deepCopy($this->container);
+    }
+
+    /** deep (recursively) copies an object
+     * 
+     * Works on booleans, integers, doubles, floats, strings, arrays and 
+     * objects (which might need a __clone() method themselves).  Resources
+     * can't be copied in a generic way, so just the reference to the resource 
+     * is returned.  FIXME: exact duplicate of ContainerArray::deepCopy().
+     * POSSIBLE FIX: declare ContainerArray::deepCopy() static and use it here.
+     * 
+     * @param mixed $object
+     * @return mixed
+     * @throws \Exception
+     */
+    protected function deepCopy($object)
+    {
+	$type = gettype($object);
+	switch ($type) {
+	case 'boolean':
+	case 'integer':
+	case 'double':
+	case 'float':
+	case 'string':
+	case 'NULL':
+	    return $object;
+	case 'array':
+	    $new = array();
+	    foreach ($object as $key => $value) {
+		$new[$key] = $this->deepCopy($value);
+	    }
+	    return $new;
+	case 'object':
+	    return clone $object;
+	case 'resource':
+	    trigger_error('Cannot clone a resource', E_WARNING);
+	    return $object;
+	default:
+	    throw new \Exception('Tried to copy an unknown type.'); 
+	}
+    }
+
+    /** is state already processed?
+     * 
+     * @return boolean
+     * @see ParserState::processed, ParserState::setProcessed()
+     */
     public function getProcessed()
     {
 	return $this->processed;
     }
 
+    /** Sets the state as processed
+     * 
+     * @return void
+     * @see ParserState::processed, ParserState::getProcessed()
+     */
     public function setProcessed()
     {
 	$this->processed = true;
     }
 
+    /** Adds a state to the shift list
+     * 
+     * The shift list holds the states to be processed in the next 
+     * iteration of the parsing process.
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserState $state
+     * @return void
+     * @see ParserState::getShifts(), ParserState::shifts, ParserState::shift()
+     */
     private function addShift(ParserState $state)
     {
 	$this->shifts[] = $state;
     }
 
+    /** Returns the shift list
+     * 
+     * The shift list holds the states to be processed in the next 
+     * iteration of the parsing process.
+     * 
+     * @return array
+     * @see ParserState::addShift(), ParserState::shifts
+     */
     public function getShifts()
     {
 	$shifts = $this->shifts;
@@ -57,6 +248,13 @@ class ParserState
 	return $shifts;
     }
 
+    /** Magic clone method
+     * 
+     * Clones x, ab and cd, which are arrays resp. a ParserState.
+     * 
+     * @return void
+     * @see ParserState::x, ParserState::ab, ParserState::cd, ParserState::copyArray()
+     */
     public function __clone()
     {
 	$this->x = clone $this->x;
@@ -64,32 +262,63 @@ class ParserState
 	$this->cd = $this->copyArray($this->cd);
     }
 
+    /** deep copies an array
+     * 
+     * FIXME: is the if clause needed?
+     * 
+     * @param array $array
+     * @return null|array
+     */
     private function copyArray(array $array)
     {
 	if ($array === null) {
 	    return null;
 	}
-
 	$new = array();
-
 	return array_merge($new, $array);
     }
 
+    /** Sets the value of the state
+     * 
+     * @param mixed $value
+     * @return void
+     * @see ParserState::value, ParserState::getValue()
+     */
     public function setValue($value)
     {
 	$this->value = $value;
     }
 
+    /** Returns the value of the state
+     * 
+     * @return mixed
+     * @see ParserState::value, ParserState::setValue()
+     */
     public function getValue()
     {
 	return $this->value or "";
     }
 
+    /** Sets the lhs of the state
+     * 
+     * x -> ab . cd from j
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserToken $x
+     * @return void
+     * @see ParserState::x, ParserState::getX()
+     */
     public function setX(ParserToken $x)
     {
 	$this->x = $x;
     }
     
+    /** Returns the lhs of the state
+     * 
+     * x -> ab . cd from j
+     * 
+     * @return \PHPSimpleLexYacc\Parser\ParserToken
+     * @see ParserState::x, ParserState::setX()
+     */
     public function getX()
     {
 	$x = $this->x;
@@ -97,6 +326,14 @@ class ParserState
 	return $x;
     }
 
+    /** Sets the tokens processed so far
+     * 
+     * x -> ab . cd from j
+     * 
+     * @param array $ab
+     * @return void
+     * @see ParserState::ab, ParserState::getAb()
+     */
     public function setAb(array $ab)
     {
 	foreach ($ab as $sym) {
@@ -105,11 +342,26 @@ class ParserState
 	$this->ab = $ab;
     }
     
+    /** Returns the tokens processed so far
+     * 
+     * x -> ab . cd from j
+     * 
+     * @return array
+     * @see ParserState::ab, ParserState::setAb()
+     */
     public function getAb()
     {
 	return $this->ab;
     }
 
+    /** Sets the tokens yet to process
+     * 
+     * x -> ab . cd from j
+     * 
+     * @param array $cd
+     * @return void
+     * @see ParserState::cd, ParserState::getcd()
+     */
     public function setCd(array $cd)
     {
 	foreach ($cd as $sym) {
@@ -118,17 +370,39 @@ class ParserState
 	$this->cd = $cd;
     }
     
+    /** Returns the tokens yet to process
+     * 
+     * x -> ab . cd from j
+     * 
+     * @return array
+     * @see ParserState::cd, ParserState::setCd()
+     */
     public function getCd()
     {
 	return $this->cd;
     }
 
+    /** Sets the origin of the state
+     * 
+     * x -> ab . cd from j
+     * 
+     * @param int $j
+     * @return void
+     * @see ParserState::j, ParserState::getJ()
+     */
     public function setJ($j)
     {
 	assert(is_int($j));
 	$this->j = $j;
     }
     
+    /** Returns the origin of the state
+     * 
+     * x -> ab . cd from j
+     * 
+     * @return int
+     * @see ParserState::j, ParserState::setJ()
+     */
     public function getJ()
     {
 	$j = $this->j;
@@ -136,22 +410,53 @@ class ParserState
 	return $j;
     }
     
+    /** Sets the reduction rule that produced this state
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserRule $rule
+     * @return void
+     * @see ParserState::rule, ParserState::getRule()
+     */
     public function setRule(ParserRule $rule)
     {
 	$this->rule = $rule;
     }
 
+    /** Returns the reduction rule of the state
+     * 
+     * @return \PHPSimpleLexYacc\Parser\ParserRule
+     * @see ParserState::rule, ParserState::setRule()
+     */
     public function getRule()
     {
 	return $this->rule;
     }
 
+    /** Sets the reduction method
+     * 
+     * Holds a link to the reduction method. Either a closure or a string 
+     * referencing a method.
+     * 
+     * @param callable|string $reduction
+     * @return void
+     * @see ParserState::reduction, ParserState::doReduction()
+     */
     public function setReduction($reduction)
     {
 	$this->reduction = $reduction;
     }
 
-    public function doReduction(array $tokens)
+    /** Does a reduction
+     * 
+     * $tokens are the tokens which made up the complete state.
+     * Checks whether reduction is a string or a closure, and calls the 
+     * corresponding method.
+     * 
+     * @param \PHPSimpleLexYacc\Parser\Helpers\ContainerArray $tokens
+     * @return mixed
+     * @throws \Exception
+     * @see ParserState::reduction, ParserState::computeValue()
+     */
+    public function doReduction(ContainerArray $tokens)
     {
 	$reduction = $this->reduction;
         if ($reduction == Null) { return; }
@@ -167,13 +472,29 @@ class ParserState
 	return $result;
     }
 
+    /** Doing the closure of the state
+     * 
+     * Depending on the next expected token, all possible rules to achieve this 
+     * token are returned as states.
+     * 
+     * @param array $grammar  the grammar definition
+     * @param int $i          the current chart number, i.e. where the closure starts from
+     * @return array          list of states
+     * @see \PHPSimpleLexYacc\Parser\AbstractParser::parse()
+     */
     public function closure(array $grammar, $i)
     {
 	assert(is_int($i));
 	$cd = $this->getCd();
 	// x->ab.cd
 	return array_map(function($rule) use ($i) {
-		return new ParserState($rule->getSymbol(), [], $rule->getRule(), $i, $rule);
+		$container = $this->cloneContainer();
+		return new ParserState($rule->getSymbol(), 
+				       array(), 
+				       $rule->getRule(), 
+				       $i, 
+				       $rule, 
+				       $container);
 	    }, 
 	    array_values(array_filter($grammar, function($rule) use ($cd) { 
 			return count($cd) > 0 and $rule->getSymbol()->equal($cd[0]); 
@@ -181,6 +502,16 @@ class ParserState
 		    )));
     }
 
+    /** Doing the shifts of the state
+     * 
+     * Tries to shift the state with the next token.  Shifts are postponed to 
+     * $this->shifts due to performance reasons.
+     * 
+     * @param array $tokens   the list of input tokens
+     * @param int $i          the current chart number
+     * @return boolean|null   true if shifts are done, false otherwise.  null if the current token is the end_of_input_marker
+     * @see \PHPSimpleLexYacc\Parser\AbstractParser::parse(), ParserState::addShift()
+     */
     public function shift (array $tokens, $i) 
     {
 	assert(is_int($i));
@@ -191,6 +522,7 @@ class ParserState
 	$cd = $this->getCd();
 	$j = $this->getJ();
 	$rule = $this->getRule();
+	$container = $this->cloneContainer();
 	if (getType($tokens[$i]) == "string") {
 	    return null;
 	}
@@ -201,13 +533,24 @@ class ParserState
 					    array_merge($ab, array($cd0)), 
 					    array_slice($cd, 1), 
 					    $j,
-					    $rule));
+					    $rule,
+					    $container));
 	    return true;
 	} else {
 	    return false;
 	}
     }
 
+    /** Doing the reductions of a state
+     * 
+     * Checks if state is finished (count(cd) == 0).  If so, returns all states
+     * at chart[j] which expected x. 
+     * 
+     * @param array $chart   the chart table
+     * @param int $i         the current chart number
+     * @return array         the list of new states
+     * @see \PHPSimpleLexYacc\Parser\AbstractParser::parse(), \PHPSimpleLexYacc\Parser\ParserToken::equal()
+     */
     public function reductions(array $chart, $i)
     {
 	assert(is_int($i));
@@ -222,15 +565,27 @@ class ParserState
 	    // no possible reductions at this time
 	    return array();
 	}
-	$value = $this->computeValue();
-	$x->setValue($value);
+	$reduction = $this->computeValue();
+	$x->setValue($reduction[0]);
 	$x->addToHistory($clone);
-	return array_map(function($jstate) use ($x) {
+        /* TODO: Diese Funktion könnte beschleunigt werden, wenn regelmäßig eine
+         * Garbagecollection durchgeführt würde und tote Status aus dem Chart 
+         * entfernt werden.
+         */
+	return array_map(function($jstate) use ($x, $reduction) {
+		$container = $jstate->cloneContainer();
+		if ($reduction instanceof ContainerArray) {
+		    $reductionArray = clone $reduction;
+		    foreach ($reductionArray->getContainer() as $key => $value) {
+			$container[$key] = $value;
+		    }
+		}
 		return new ParserState($jstate->getX(), 
 				       array_merge($jstate->getAb(), array($x)), 
 				       array_slice($jstate->getCd(), 1), 
 				       $jstate->getJ(),
-				       $jstate->getRule());
+				       $jstate->getRule(),
+				       $container);
 	    },
 	    array_values(array_filter($chart[$j], function($jstate) use ($x) {
 			return count($jstate->getCd()) > 0 and $jstate->getCd()[0]->equal($x);
@@ -238,10 +593,21 @@ class ParserState
 		    )));
     }
 
+    /** Returns the history of the state
+     * 
+     * makesup a unique parse tree.  the results are cached in $this->history 
+     * for performance reasons.
+     * 
+     * @return string   The history as a string representation
+     * @see ParserState::history
+     */
     public function getHistory()
     {
-	$result = "";
 	$tokens = $this->getAb();
+        if (count($this->history) == 2 && $this->history[0] == count($tokens)) {
+            return $this->history;
+        }
+	$result = "";
 	foreach ($tokens as $t) {
 	    $result .= " " . $t->getType();
 	    $history = $t->getHistory();
@@ -250,9 +616,19 @@ class ParserState
 	    }
 	    $result .= " ";
 	}
+        $this->history = array(count($tokens), $result);
 	return $result;
     }
 
+    /** Returns a specific rank of the state
+     * 
+     * Due to the associativity and precedence of the according rule, the rank
+     * is computed and returned.
+     * 
+     * @return array   the rank
+     * @throws \Exception
+     * @see ParserState::countParserTokens(), \PHPSimpleLexYacc\Parser\ParserRule::getAssociativity(), \PHPSimpleLexYacc\Parser\ParserRule::getPrecedence(), \PHPSimpleLexYacc\Parser\ParserToken::getHistory()
+     */
     public function getRank()
     {
 	$assoc = $this->getRule()->getAssociativity();
@@ -292,6 +668,11 @@ class ParserState
 	return $result;
     }
 
+    /** Returns the total number of terminals inherited by the state
+     * 
+     * @return int   the total number of terminals
+     * @see ParserToken::getHistory() 
+     */
     protected function countParserTokens()
     {
 	$result = 0;
@@ -306,22 +687,46 @@ class ParserState
 	return $result;
     }
 
+    /** Returns the value of the state so far
+     * 
+     * According to the so far read symbols, the states value is computed by
+     * the associated reduction function.  This method also takes care of the 
+     * container.
+     * 
+     * @return array  
+     * @see ParserState::container, ParserState::doReduction(), \PHPSimpleLexYacc\Parser\Helpers\ContainerArray
+     */
     private function computeValue()
     {
 	//assert(count($this->getCd()) == 0);
-	$p = array(null); // p[0] : Value of x (to be computed)
+	$p = new ContainerArray();
+	$p[0] = null;  // p[0] : Value of x (to be computed)
+	$p->setContainer($this->cloneContainer());
 	foreach ($this->getAb() as $token) {
 	    $p[] = $token->getValue();
 	}
 	$p = $this->doReduction($p);
-	return $p[0];
+	return $p;
     }
 
+    /** Checks if the state is fullfills the given rule.
+     * 
+     * WARNING: THIS METHOD SHOULD ONLY BE USED WITH THE START RULE!!!
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserRule $rule
+     * @return boolean
+     * @see ParserState::toString(), \PHPSimpleLexYacc\Parser\ParserRule::toString()
+     */
     public function equal(ParserRule $rule)
     {
 	return $this->toString() == $rule->toString() . " .  from 0";
     }
 
+    /** Returns a **unique** representation of the state
+     * 
+     * @return string
+     * @see ParserState::toString(), \PHPSimpleLexYacc\Parser\ParserToken::__toString()
+     */
     public function __toString()
     {
 	$ab = '';
@@ -344,6 +749,11 @@ class ParserState
 	    . $this->getJ();
     }
 
+    /** Returns a short, **non-unique** representation of the state
+     * 
+     * @return string
+     * @see ParserState::toString(), \PHPSimpleLexYacc\Parser\ParserToken::getType()
+     */
     public function toString()
     {
 	$ab = '';

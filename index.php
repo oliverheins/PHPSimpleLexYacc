@@ -1,4 +1,110 @@
 <?php
+
+class MyArray extends \ArrayObject
+{
+    public $container = array();
+
+    public function getContainer()
+    {
+	return $this->container;
+    }
+
+    public function setContainer(array $container)
+    {
+	$this->container = $container;
+    }
+
+    public function __clone()
+    {
+	$this->container = $this->deepCopy($this->container);
+    }
+
+    private function deepCopy($object)
+    {
+	$type = gettype($object);
+	switch ($type) {
+	case 'boolean':
+	case 'integer':
+	case 'double':
+	case 'float':
+	case 'string':
+	case 'NULL':
+	    return $object;
+	case 'array':
+	    $new = array();
+	    foreach ($object as $key => $value) {
+		$new[$key] = $this->deepCopy($value);
+	    }
+	    return $new;
+	case 'object':
+	    return clone $object;
+	case 'resource':
+	    trigger_error('Cannot clone a resource', E_WARNING);
+	    return $object;
+	default:
+	    throw new \Exception('Tried to copy an unknown type.'); 
+	}
+    }
+
+}
+
+$b = function() { echo "hallo"; };
+
+echo gettype($b);
+
+$a = new MyArray();
+
+$a[] = 1;
+$a[] = 2;
+
+echo "<h3>a</h3>";
+
+foreach ($a as $key => $value) {
+    echo "$key => $value<br>";
+}
+
+
+$ab = [1, 2, 3, 4, ['a', 'b', new \StdClass], 5, 6];
+
+$container = $a->getContainer();
+
+$container[] = 3;
+$container[] = 4;
+$container[] = $ab;
+
+$b = clone $a;
+
+$container[2][4] = 'foo';
+
+// $a->setContainer($container);
+
+// unset($container);
+
+echo "container:<br>";
+
+foreach ($a->container as $key => $value) {
+    echo "$key => $value<br>";
+}
+
+echo "<h3>b</h3>";
+
+foreach ($b as $key => $value) {
+    echo "$key => $value<br>";
+}
+
+echo "container:<br>";
+
+foreach ($b->container as $key => $value) {
+    echo "$key => $value<br>";
+}
+
+var_dump($b->container);
+var_dump($a->container);
+
+
+
+exit();
+
 include_once("Parser/LexerBuilder.php");
 include_once("Parser/AbstractParser.php");
 include_once("Parser/ParserRule.php");

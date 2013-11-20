@@ -1,0 +1,6 @@
+* Garbace Collection: nach jeder iteration aufräumen.  dazu wird die aktuelle 
+  chart number bei jedem shift in alle Vorgänger geschrieben.  Rekursiv die 
+  history durchgehen, wobei getestet werden sollte, ob ein Element bereits die
+  chart number enthält -- und damit auch bereits alle Vorgänger.  Die Garbage 
+  Collection durchläuft dann alle Charts bis zum aktuellen und löscht alle 
+  States, die nicht die aktuelle chart number enthalten.

@@ -1,15 +1,51 @@
 <?php
+/** Generator module of PhpSimpleLexYacc
+ *
+ * @package generator
+ * @author    Oliver Heins 
+ * @copyright 2013 Oliver Heins <oheins@sopos.org>
+ * @license GNU Affero General Public License; either version 3 of the license, or any later version. See <http://www.gnu.org/licenses/agpl-3.0.html>
+ */
+
 namespace PHPSimpleLexYacc\Parser\Generators;
 
 require_once("MemberGenerator.php");
 
+/** Class to generate methods
+ */
 class MethodGenerator extends MemberGenerator
 {
+    /** the source body, possible stripped
+     *
+     * @var string
+     */
     protected $body;
+    
+    /** the original source code of the method
+     *
+     * @var string
+     */
     protected $source;
+    
+    /** list of parameters
+     *
+     * @var array
+     */
     protected $parameters = array();
+    
+    /** is the method anonymous?
+     *
+     * @var boolean
+     */
     protected $anonymous;
 
+    /** Constructor
+     * 
+     * @param array $parameters A key=>value list of the parameters
+     * @see MethodGenerator::setName(), MethodGenerator::setReflection(), MethodGenerator::setDocstring(), MethodGenerator::setAbstract(), MethodGenerator::setFinal(), MethodGenerator::setBody(), MethodGenerator::setSource(), MethodGenerator::setVisibility(), MethodGenerator::setPublic(), MethodGenerator::setPrivate(),MethodGenerator::setProtected(), MethodGenerator::setAnonymous(),    
+     * @return void
+     * @throws \Exception
+     */
     public function __construct(array $parameters = array())
     {
 	foreach ($parameters as $key => $value) {
@@ -37,6 +73,11 @@ class MethodGenerator extends MemberGenerator
 	}
     }
 
+    /** Extracts the relevant portions of the source
+     * 
+     * @see MethodGenerator::setBody(), MethodGenerator::body, MethodGenerator::source, MethodGenerator::name 
+     * @return void
+     */
     public function extractBody() 
     {
 	$source = $this->getSource();
@@ -52,49 +93,100 @@ class MethodGenerator extends MemberGenerator
 	$this->setBody($body);
     }
 
-
+    /** Returns the body
+     * 
+     * @return string
+     * @see MethodGenerator::body
+     */
     public function getBody()
     {
 	return $this->body;
     }
 
+    /** Sets the body of the method
+     * 
+     * @param string $body
+     * @return void
+     * @see MethodGenerator::body
+     */
     public function setBody($body)
     {
 	assert(is_string($body));
 	$this->body = $body;
     }
 
+    /** Returns the source of the method
+     * 
+     * @return string
+     * @see MethodGenerator::source
+     */
     public function getSource()
     {
 	return $this->source;
     }
 
+    /** Sets the source of the method
+     * 
+     * @param string $source
+     * @return void
+     * @see MethodGenerator::source
+     */
     public function setSource($source)
     {
 	assert(is_string($source));
 	$this->source = $source;
     }
 
+    /** Returns the list of parameters
+     * 
+     * @see MethodGenerator::parameters
+     * @return array
+     */
     public function getParameters()
     {
 	return $this->parameters;
     }
 
+    /** Sets the list of parameters
+     * 
+     * @param array $parameters
+     * @return void
+     * @see MethodGenerator::parameters
+     */
     public function setParameters(array $parameters)
     {
 	$this->parameters = $parameters;
     }
 
+    /** Sets if the method is anonymous
+     * 
+     * @return void
+     * @see MethodGenerator::anonymous
+     * @param bool $anonymous
+     */
     public function setAnonymous($anonymous)
     {
 	$this->anonymous = (bool) $anonymous;
     }
 
+    /** Returns if the method is anonymous
+     * 
+     * @return boolean
+     * @see MethodGenerator::anonymous
+     */
     public function isAnonymous()
     {
 	return $this->anonymous;
     }
 
+    /** Generates an anonymous function
+     * 
+     * Sets MethodGenerator::code to the lambda function and 
+     * returns the code.
+     * 
+     * @see MethodGenerator::code, MethodGenerator::getBodyCode(), MethodGenerator::setCode()
+     * @return string
+     */
     public function generateLambda()
     {
 	$code = '';
@@ -107,6 +199,11 @@ class MethodGenerator extends MemberGenerator
 
     }
 
+    /** Generates the code, sets and returns it
+     * 
+     * @see MethodGenerator::getDocstring(), MethodGenerator::isFinal(), MethodGenerator::isAbstract(), MethodGenerator::isPublic(), MethodGenerator::isPrivate(), MethodGenerator::isProtected(), MethodGenerator::isStatic(), MethodGenerator::getName(), MethodGenerator::getBodyCode(), MethodGenerator::setCode()
+     * @return string
+     */
     public function generateCode()
     {
 	$code = '';
@@ -139,6 +236,11 @@ class MethodGenerator extends MemberGenerator
 	return $code;
     }
 
+    /** Generates the code of the method
+     * 
+     * @see MethodGenerator::Parameters, MethodGenerator::getBody(), \ReflectionParameter::getClass(), \ReflectionClass::getName(), \ReflectionParameter::isPassedByReference()
+     * @return string
+     */ 
     protected function getBodyCode()
     {
 	$code = '(';
