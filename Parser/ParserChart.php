@@ -101,16 +101,22 @@ class ParserChart
     
     public function garbageCollection($index)
     {
-//        $keys = array_keys($this->gcTable);
-//        $max = count($this->gcTable);
+        $keys = array_keys($this->gcTable);
         
-        $newChart = array();
-        for ($i=0, $count=count($this->chart); $i < $count; $i++) {
-            $newChart[$i] = array();
+        for ($i=0; $i < $index; $i++) {
+            if (!isset($this->gcTable[$i])) {
+                // nothing to do in this state
+                continue;
+            }
+            if (count($this->chart[$i] < 5)) { // very few elements
+                // on next iteration, don't gc this chart anymore
+                unset($this->gcTable[$i]);
+            }
+            $newChart = array();
             //$this->reductionTable[$i] = array();
             foreach ($this->chart[$i] as $state) {
                 if ($state->getAliveInChart() >= $index) {
-                    $newChart[$i][] = $state;
+                    $newChart[] = $state;
                     // building the reduction table
                     //$this->addToReductionTable($i, $state);
                 } else {
@@ -119,8 +125,9 @@ class ParserChart
                     unset($this->reductionTable[$i][$rt[0]][$rt[1]]);
                 }
             }
+            $this->chart[$i] = $newChart;
         }
-        $this->chart = $newChart;
+        $this->gcTable[$index] = true;
     }
     
     private function addToReductionTable($index, $state)
