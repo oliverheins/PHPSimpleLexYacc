@@ -8,7 +8,8 @@
  */
 namespace PHPSimpleLexYacc\Parser;
 
-require_once('Helpers/ContainerArray.php');
+include_once('ParserGrammar.php');
+include_once('Helpers/ContainerArray.php');
 use PHPSimpleLexYacc\Parser\Helpers\ContainerArray;
 
 /** holds a state of the parser
@@ -51,6 +52,20 @@ class ParserState
      */
     private $rule;
     
+    /** the chart number the state lives in
+     *
+     * @var int
+     * @see ParserState::getChartNr(), ParserState::setChartNr()
+     */
+    private $chartNr;
+    
+    /** the symbol name and index key of the charts reduction table
+     * 
+     * @var array   array(symbolname, key)
+     * @see ParserState::setReductionTableKey(), ParserState::getReductionTableKey()
+     */
+    private $reductionTableKey;
+    
     /** holds a link to the reduction method
      * 
      * Either a closure or a string referencing a method.
@@ -91,12 +106,26 @@ class ParserState
      */
     private $container;
     
-    /** the cached history of the state
+    /** the cache , used for the history of the state
      *
-     * @var string
+     * @var array
      * @see ParserState::getHistory()
      */
     private $cache = array();
+    
+    /** the predecessors of the state
+     *
+     * @var array   list of ParserStates
+     * @see ParserState::addPredecessor(), ParserState::getPredecessors()
+     */
+    private $predecessors = array();
+    
+    /** the latest chart the state is alive in
+     *
+     * @var int
+     * @see ParserState::setAliveInChart(), ParserState::getAliveInChart()
+     */
+    private $aliveInChart = 0;
     
     /** Constructor
      * 
@@ -106,8 +135,10 @@ class ParserState
      * @param int $j x -> ab . cd from j
      * @param \PHPSimpleLexYacc\Parser\ParserRule $rule the associated rule
      * @param array $container the container
+     * @param \PHPSimpleLexYacc\Parser\ParserState $predecessor the states predecessor, if any
+     * @param int $chartNr  the chart no this state lives in
      */
-    public function __construct($x, array $ab, array $cd, $j, $rule = null, $container = array())
+    public function __construct($x, array $ab, array $cd, $j, $chartNr = 0, $rule = null, $container = array(), $predecessor = null)
     {
 	assert($x instanceof ParserToken);
 	assert(is_array($ab));
@@ -118,16 +149,144 @@ class ParserState
 	$x = clone $x;
 	$ab = $this->copyArray($ab);
 	$cd = $this->copyArray($cd);
-	$this->setX($x);
-	$this->setAb($ab);
-	$this->setCd($cd);
-	$this->setJ($j);
-	$this->setReduction($x->getReduction());
+        $this->x = $x;
+        $this->ab = $ab;
+        $this->cd = $cd;
+        $this->j = $j;
+        $this->reduction = $x->getReduction();
+        $this->chartNr = $chartNr;
 	if ($rule !== null) {
+            $this->rule = $rule;
 	    $this->setRule($rule);
 	}
-	$this->setContainer($container);
+        $this->container = $container;
+        if ($predecessor !== null) {
+            $this->addPredecessor($predecessor);
+            if ($chartNr !== null) {
+                $this->setAliveInChart($chartNr);
+            }
+        }
         $this->cache['history'] = null;
+    }
+    
+    /** Setter method for the chart number of this state
+     * 
+     * @param int $i
+     * @return void
+     * @see ParserState::chartNr, ParserState::getChartNr()
+     */
+    protected function setChartNr($i)
+    {
+        assert(is_int($i));
+        $this->chartNr = $i;
+    }
+    
+    /** Getter method for the chart number of this state
+     * 
+     * @return int
+     * @see ParserState::chartNr, ParserState::setChartNr()
+     */
+    protected function getChartNr()
+    {
+        return $this->chartNr;
+    }
+    
+    /** Setter method for the symbol name and key in the charts reduction table
+     * 
+     * @param string $symbolname
+     * @param int $key
+     * @return void
+     * @see ParserState::reductionTableKey, ParserState::getReductionTableKey()
+     */
+    public function setReductionTableKey($symbolname, $key)
+    {
+        assert(is_string($symbolname) && is_int($key));
+        $this->reductionTableKey = array($symbolname, $key);
+    }
+    
+    /** Getter method for the symbol name and key in the charts reduction table
+     * 
+     * @return array
+     * @see ParserState::reductionTableKey, ParserState::setReductionTableKey()
+     */
+    public function getReductionTableKey()
+    {
+        return $this->reductionTableKey;
+    }
+    
+    /** Setter method for the pointer to the latest chart this state has a successor in
+     * 
+     * Calls itself on this states predecessor.
+     * 
+     * @param int $i
+     * @see ParserState::aliveInChart, ParserState::getAliveInChart(), ParserState::updateAliveInChart()
+     * @return void
+     */
+    public function setAliveInChart($i)
+    {
+        assert(is_int($i));
+        if ($this->aliveInChart === $i) {
+            // return immediately if already set to the latest chart
+            return;
+        }
+        $this->aliveInChart = $i;
+        $todo = $this->predecessors;
+        while ($predecessor = array_pop($todo)) {
+            if ($predecessor->updateAliveInChart($i)) {
+                foreach ($predecessor->getPredecessors() as $state) {
+                    $todo[] = $state;
+                }
+            }
+        }
+    }
+
+    /** Sets the chart number the state is still alive
+     * 
+     * @param int $i
+     * @return boolean  false if already set, true otherwise
+     * @see ParserState::aliveInChart, ParserState::setAliveInChart()
+     */
+    public function updateAliveInChart($i)
+    {
+        assert(is_int($i));
+        if ($this->aliveInChart === $i) {
+            // return immediately if already set to the latest chart
+            return false;
+        }
+        $this->aliveInChart = $i;
+        return true;
+    }
+    
+    /** Getter method for the pointer to the latest chart this state has a successor in
+     * 
+     * @return int   the chart number which has the latest successor of this state
+     * @see ParserState::aliveInChart, ParserState::setAliveInChart()
+     */
+    public function getAliveInChart()
+    {
+        assert(is_int($this->aliveInChart));
+        return $this->aliveInChart;
+    }
+    
+    /** Setter method for the predecessor
+     * 
+     * @return void
+     * @param \PHPSimpleLexYacc\Parser\ParserState $predecessor
+     * @see ParserState::predecessors, ParserState::getPredecessors()
+     */
+    public function addPredecessor(ParserState $predecessor)
+    {
+        $this->predecessors[] = $predecessor;
+    }
+    
+    /** Getter method for the predecessor
+     * 
+     * @return array  list of ParserStates
+     * @see ParserState::predecessor, ParserState::addPredecessor()
+     */
+    public function getPredecessors()
+    {
+        return $this->predecessors;
     }
 
     /** Setter method for the container
@@ -478,29 +637,36 @@ class ParserState
      * Depending on the next expected token, all possible rules to achieve this 
      * token are returned as states.
      * 
-     * @param array $grammar  the grammar definition
+     * @param ParserGrammar $grammar  the grammar definition
      * @param int $i          the current chart number, i.e. where the closure starts from
      * @return array          list of states
      * @see \PHPSimpleLexYacc\Parser\AbstractParser::parse()
      */
-    public function closure(array $grammar, $i)
+    public function closure(ParserGrammar $grammar, $i)
     {
 	assert(is_int($i));
 	$cd = $this->getCd();
+        if (count($cd) === 0) {
+            return array();
+        }
 	// x->ab.cd
 	return array_map(function($rule) use ($i) {
 		$container = $this->cloneContainer();
 		return new ParserState($rule->getSymbol(), 
 				       array(), 
 				       $rule->getRule(), 
-				       $i, 
+				       $i,
+                                       $i,
 				       $rule, 
-				       $container);
+				       $container,
+                                       $this);
 	    }, 
-	    array_values(array_filter($grammar, function($rule) use ($cd) { 
-			return count($cd) > 0 and $rule->getSymbol()->equal($cd[0]); 
-		    }
-		    )));
+//	    array_values(array_filter((array) $grammar, function($rule) use ($cd) { 
+//			return $rule->getSymbol()->equal($cd[0]); 
+//		    }
+//		    ))
+                    $grammar->getClosures($cd[0])
+                    );
     }
 
     /** Doing the shifts of the state
@@ -517,25 +683,27 @@ class ParserState
     {
 	assert(is_int($i));
 	assert($tokens[$i] instanceof Token or $tokens[$i] == "end_of_input_marker");
-	// x->ab.cd from j tokens[i]==c?
-	$x = $this->getX();
-	$ab = $this->getAb();
-	$cd = $this->getCd();
-	$j = $this->getJ();
-	$rule = $this->getRule();
-	$container = $this->cloneContainer();
-	if (getType($tokens[$i]) == "string") {
+	if (is_string($tokens[$i])) {
 	    return null;
 	}
+	// x->ab.cd from j tokens[i]==c?
+	$cd = $this->getCd();
 	if (count($cd) > 0 and $cd[0]->compare($tokens[$i])) {
-	    $cd0 = new ParserToken(array("type"  => $tokens[$i]->getType(),
+            $x = $this->getX();
+            $ab = $this->getAb();
+            $j = $this->getJ();
+            $rule = $this->getRule();
+            $container = $this->cloneContainer();
+            $cd0 = new ParserToken(array("type"  => $tokens[$i]->getType(),
 					 "value" => $tokens[$i]->getValue()));
 	    $this->addShift(new ParserState($x, 
 					    array_merge($ab, array($cd0)), 
 					    array_slice($cd, 1), 
 					    $j,
+                                            $i+1,
 					    $rule,
-					    $container));
+					    $container,
+                                            $this));
 	    return true;
 	} else {
 	    return false;
@@ -547,33 +715,29 @@ class ParserState
      * Checks if state is finished (count(cd) == 0).  If so, returns all states
      * at chart[j] which expected x. 
      * 
-     * @param array $chart   the chart table
-     * @param int $i         the current chart number
-     * @return array         the list of new states
+     * @param array $reductions  the reduction table
+     * @param int $i             the current chart number
+     * @return array             the list of new states
      * @see \PHPSimpleLexYacc\Parser\AbstractParser::parse(), \PHPSimpleLexYacc\Parser\ParserToken::equal()
      */
-    public function reductions(array $chart, $i)
+    public function reductions(array $reductions, $i)
     {
 	assert(is_int($i));
 	// ab. from j
 	// chart[j] has y->... .x ....from k
-	$x = $this->getX();
-	$ab = $this->getAb();
 	$cd = $this->getCd();
-	$j = $this->getJ();
-	$clone = clone $this;
 	if (count($cd) != 0) { 
 	    // no possible reductions at this time
 	    return array();
 	}
+	$x = $this->getX();
+	$ab = $this->getAb();
+	$j = $this->getJ();
+	$clone = clone $this;
 	$reduction = $this->computeValue();
 	$x->setValue($reduction[0]);
 	$x->addToHistory($clone);
-        /* TODO: Diese Funktion könnte beschleunigt werden, wenn regelmäßig eine
-         * Garbagecollection durchgeführt würde und tote Status aus dem Chart 
-         * entfernt werden.
-         */
-	return array_map(function($jstate) use ($x, $reduction) {
+	return array_map(function($jstate) use ($x, $reduction, $i) {
 		$container = $jstate->cloneContainer();
 		if ($reduction instanceof ContainerArray) {
 		    $reductionArray = clone $reduction;
@@ -585,13 +749,15 @@ class ParserState
 				       array_merge($jstate->getAb(), array($x)), 
 				       array_slice($jstate->getCd(), 1), 
 				       $jstate->getJ(),
+                                       $i,
 				       $jstate->getRule(),
-				       $container);
-	    },
-	    array_values(array_filter($chart[$j], function($jstate) use ($x) {
-			return count($jstate->getCd()) > 0 and $jstate->getCd()[0]->equal($x);
-		    }
-		    )));
+				       $container,
+                                       $this);
+	    }, $reductions);
+//	    array_values(array_filter($chart->get($j), function($jstate) use ($x) {
+//			return count($jstate->getCd()) > 0 and $jstate->getCd()[0]->equal($x);
+//		    }
+//                    )));
     }
 
     /** Returns the history of the state
@@ -606,7 +772,7 @@ class ParserState
     {
 	$tokens = $this->getAb();
         if (count($this->cache['history']) == 2 && $this->cache['history'][0] == count($tokens)) {
-            return $this->cache['history'];
+            return $this->cache['history'][1];
         }
 	$result = "";
 	foreach ($tokens as $t) {

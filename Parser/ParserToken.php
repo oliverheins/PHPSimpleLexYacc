@@ -9,6 +9,7 @@ class ParserToken
     private $value = Null;
     private $reduction = Null;
     private $history;
+    private $cache;
 
     public function __construct(array $args = array()) 
     {
@@ -59,6 +60,7 @@ class ParserToken
     public function setValue($value)
     {
 	$this->value = $value;
+        unset($this->cache);
     }
 
     public function getHistory()
@@ -70,10 +72,42 @@ class ParserToken
     {
 	$this->history = $state;
     }
+    
+    private function valToString($value)
+    {
+        if (is_string($value) or is_numeric($value) or is_bool($value)) {
+            return (string) $value;
+        }
+        if (is_array($value)) {
+            return "Array";
+            $result = array();
+            foreach ($value as $val) {
+                $result .= $this->valToString($value);
+            }
+            return implode(",", $result);
+        }
+        if (is_null($value)) {
+            return "NULL";
+        }
+        if (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return $value.__toString();
+            } else {
+                return get_class($value);
+            }
+        }
+        if (is_resource($value)) {
+            return "Resource";
+        }
+        return "Unknown";
+    }
 
     public function __toString()
     {
-	return $this->getType() . " (" . $this->value . ")";
+        if (!isset($this->cache)) {
+            $this->cache = $this->getType() . " (" . $this->valToString($this->value) . ")";
+        }
+	return $this->cache;
     }
 
     public function __clone()

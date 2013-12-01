@@ -5,6 +5,9 @@ class ParserChart
 {
     private $chart = array();
     private $includes = array();
+    private $chartIncludes = array();
+    private $reductionTable = array();
+    private $gcTable = array();
 
     public function __construct($length)
     {
@@ -12,6 +15,7 @@ class ParserChart
 	for ($i = 0; $i <= $length; $i++) {
 	    $this->chart[$i] = array();
 	    $this->includes[$i] = array();
+            $this->chartIncludes[$i] = array();
 	}
     }
 
@@ -69,17 +73,72 @@ class ParserChart
 	$str_rep = $elt->__toString() . $elt->getHistory();
 
 	// Just for safety, should never happen
-	if (!array_key_exists($index, $this->chart)) {
+	if (!isset($this->chart[$index])) {
 	    $this->chart[$index] = array();
 	    $this->includes[$index] = array();
+            $this->chartIncludes[$index] = array();
 	}
 	// check if element already exists.  If not, add to chart
-	if (!array_key_exists($str_rep, $this->includes[$index])) {
-	    array_push($this->chart[$index], $elt);
+	if (!isset($this->includes[$index][$str_rep])) {
+	    $chartkey = array_push($this->chart[$index], $elt) - 1;
+            $this->chartIncludes[$index][$str_rep] = $chartkey; 
 	    $this->includes[$index][$str_rep] = true;
+            $this->addToReductionTable($index, $elt);
 	    return true;
 	}
+        $this->chart[$index][$this->chartIncludes[$index][$str_rep]]->addPredecessor($elt);
 	return false;
     }
-
+    
+    public function getReductions($index, $symbol)
+    {
+        if (isset($this->reductionTable[$index]) and isset($this->reductionTable[$index][$symbol])) {
+            return $this->reductionTable[$index][$symbol];
+        } else {
+            return array();
+        }
+    }
+    
+    public function garbageCollection($index)
+    {
+//        $keys = array_keys($this->gcTable);
+//        $max = count($this->gcTable);
+        
+        $newChart = array();
+        for ($i=0, $count=count($this->chart); $i < $count; $i++) {
+            $newChart[$i] = array();
+            //$this->reductionTable[$i] = array();
+            foreach ($this->chart[$i] as $state) {
+                if ($state->getAliveInChart() >= $index) {
+                    $newChart[$i][] = $state;
+                    // building the reduction table
+                    //$this->addToReductionTable($i, $state);
+                } else {
+                    // removing from reduction table
+                    $rt = $state->getReductionTableKey();
+                    unset($this->reductionTable[$i][$rt[0]][$rt[1]]);
+                }
+            }
+        }
+        $this->chart = $newChart;
+    }
+    
+    private function addToReductionTable($index, $state)
+    {
+        $cd = $state->getCd();
+        if (count($cd) === 0) {
+            return;
+        }
+        $symbolname = $cd[0]->getType();
+        if (!isset($this->reductionTable[$index])) {
+            $this->reductionTable[$index] = array();
+        }
+        if (!isset($this->reductionTable[$index][$symbolname])) {
+            $this->reductionTable[$index][$symbolname] = array($state);
+        } else {
+            $this->reductionTable[$index][$symbolname][] = $state;
+        }
+        end($this->reductionTable[$index][$symbolname]);
+        $state->setReductionTableKey($symbolname, key($this->reductionTable[$index][$symbolname]));
+    }
 }

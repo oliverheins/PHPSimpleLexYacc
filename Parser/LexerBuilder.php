@@ -428,7 +428,7 @@ abstract class LexerBuilder extends AbstractBuilder
 
 
 	foreach($this->innerMethods as $key => $val) {
-	    uasort($this->innerMethods[$key], array("TokenGenerator", "compare"));
+	    uasort($this->innerMethods[$key], array("\PHPSimpleLexYacc\Parser\Generators\TokenGenerator", "compare"));
 	}
     }
 

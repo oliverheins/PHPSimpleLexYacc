@@ -12,6 +12,7 @@ require_once("ParserRule.php");
 require_once("ParserState.php");
 require_once("ParserChart.php");
 require_once("ParserToken.php");
+require_once("ParserGrammar.php");
 
 /** core parser class
  * 
@@ -34,6 +35,12 @@ abstract class AbstractParser
      * @see AbstractParser::printChart()
      */
     private $chart;
+    
+    /** the length of the chart
+     *
+     * @var int
+     */
+    private $chartLength;
     
     /** the grammar rule with which parsing starts
      *
@@ -88,8 +95,6 @@ abstract class AbstractParser
 
     /** Sets the grammar
      * 
-     * Asserts that $grammar is a list of ParserRules
-     * 
      * @param array $grammar
      * @return void
      * @see AbstractParser::grammar, PHPSimpleLexYacc\Parser\ParserRule
@@ -97,10 +102,10 @@ abstract class AbstractParser
     protected function setGrammar(array $grammar)
     {
 	assert(count($grammar) > 0);
-	foreach ($grammar as $rule) {
-	    assert($rule instanceof ParserRule);
-	}
-	$this->grammar = $grammar;
+//	foreach ($grammar as $rule) {
+//	    assert($rule instanceof ParserRule);
+//	}
+	$this->grammar = new ParserGrammar($grammar);
 	$this->start_rule = $grammar[0];
     }
 
@@ -122,7 +127,7 @@ abstract class AbstractParser
     {
 	assert(is_int($pos));
 	$str = $rule->__toString();
-	if(!array_key_exists($str, $this->complex)) {
+	if(!isset($this->complex[$str])) {
 	    $this->complex[$str] = array();
 	}
 	$this->complex[$str][$pos] = true;
@@ -130,7 +135,7 @@ abstract class AbstractParser
 
     protected function higherRank(array $one, array $two)
     {
-	for ($i = 0; $i < min(count($one), count($two)); $i++) {
+	for ($i = 0, $cone = count($one), $ctwo = count($two); $i < min($cone, $ctwo); $i++) {
 	    $curr1 = $one[$i];
 	    $curr2 = $two[$i];
 	    assert(count($curr1 == 4) && count($curr2 == 4));
@@ -202,13 +207,13 @@ abstract class AbstractParser
 	    $rule = $state->getRule()->__toString();
 	    $from = $state->getJ();
 	    $pos = count($state->getAb());
-	    if (!array_key_exists($rule, $table)) {
+	    if (!isset($table[$rule])) {
 		$table[$rule] = array();
 	    }
-	    if (!array_key_exists($from, $table[$rule])) {
+	    if (!isset($table[$rule[$from]])) {
 		$table[$rule][$from] = array();
 	    }
-	    if (!array_key_exists($pos, $table[$rule][$from])) {
+	    if (!isset($table[$rule][$from][$pos])) {
 		$table[$rule][$from][$pos] = array();
 	    }
 	    $table[$rule][$from][$pos][] = $state;
@@ -261,13 +266,13 @@ abstract class AbstractParser
 	}
 	$rule = $rule->__toString();
 	// check if rule may be of any interest, return false if not
-	if (!array_key_exists($rule, $this->complex)) {
+	if (!isset($this->complex[$rule])) {
 	    return false;
 	}
 	$ab = $state->getAb();
 	// pos of last reduced symbol
 	$pos = count($ab) - 1; 
-	return array_key_exists($pos, $this->complex[$rule]);
+	return isset($this->complex[$rule][$pos]);
     }
 
     protected function doShifts($i)
@@ -283,13 +288,14 @@ abstract class AbstractParser
     public function parse(array $tokens)
     {
 	$tokens[] = "end_of_input_marker"; // TODO
-	// Create chart as list of empty lists, length = no of tokens
-	$this->chart = new ParserChart(count($tokens));
+	// Create chart, length = no of tokens
+        $this->chartLength = count($tokens);
+	$this->chart = new ParserChart($this->chartLength);
 	// $start_state: StartSymbol -> [] . [StartRule] from 0
-	$start_state = new ParserState($this->start_rule->getSymbol(), [], $this->start_rule->getRule(), 0, $this->start_rule);
+	$start_state = new ParserState($this->start_rule->getSymbol(), [], $this->start_rule->getRule(), 0, 0, $this->start_rule);
 	// Add $start_state to the chart
 	$this->chart->set(0, $start_state);
-	for ($i = 0; $i < count($tokens); $i++) {
+	for ($i = 0; $i < $this->chartLength; $i++) {
 	    while (True) {
 		$changes = false;
 		foreach ($this->chart->get($i) as $state) {
@@ -340,7 +346,9 @@ abstract class AbstractParser
 		    // English: We just finished parsing an "x" with this token,
 		    //  but that may have been a sub-step (like matching "exp -> 2"
 		    //  in "2+3"). We should update the higher-level rules as well.
-		    $next_states = $state->reductions($this->chart->get(-1), $i);
+//		    $next_states = $state->reductions($this->chart->get($state->getJ()), $i);
+                    $reductions = $this->chart->getReductions($state->getJ(), $state->getX()->getType());
+    		    $next_states = $state->reductions($reductions, $i);
 		    foreach ($next_states as $next_state) {
 			$changes = $this->chart->add($i, $next_state) || $changes;
 		    }
@@ -358,18 +366,21 @@ abstract class AbstractParser
 	    // we postponed shifting, so we do it now.
 	    $this->doShifts($i);
 
+	    // if ($this->getDebugLevel() == 2) {
+	//	$this->printChart($tokens);
+	    // }
+            $this->chart->garbageCollection($i);
 	    if ($this->getDebugLevel() == 2) {
-		$this->printChart($tokens);
+		$this->printChart($tokens, $i+1);
 	    }
-
 	}
 
 	if ($this->getDebugLevel() == 1) {
-	    $this->printChart($tokens);
+	    $this->printChart($tokens, $i+1);
 	}
 
     }
-
+    
     protected function setDebugLevel($level)
     {
 	assert(is_int($level) and $level >= 0 and $level <= 2);
@@ -379,13 +390,13 @@ abstract class AbstractParser
     protected function getDebugLevel()
     {
 	$debuglevel = $this->debuglevel;
-	assert(is_int($debuglevel) and $debuglevel >= 0 and $debuglevel <= 2);
+	assert(is_int($debuglevel) and $debuglevel >= 0 and $debuglevel <= 3);
 	return $debuglevel;
     }
 
-    private function printChart($tokens)
+    private function printChart($tokens, $chartnr)
     {
-	for ($n = 0; $n < count($tokens); $n++) {
+	for ($n = 0, $count = count($tokens); $n < min($chartnr, $count); $n++) {
 	    echo "== chart " . $n . "<br>\n";
 	    foreach ($this->chart->get($n) as $state) {
 		$x  = $state->getX();
@@ -393,17 +404,25 @@ abstract class AbstractParser
 		$cd = $state->getCd();
 		$j  = $state->getJ();
 		$val = $x->getValue();
+                $alive = $state->getAliveInChart();
+                if (is_array($val)) {
+                    $val = "Array"; 
+                }
 		echo "&nbsp;&nbsp;&nbsp;&nbsp;" . $x->getType() . " -> ";
 		foreach ($ab as $sym) {
-		    echo $sym->getType() . " (" . $sym->getValue() . ") ";
+                    $sval = $sym->getValue();
+                    if (is_array($sval)) {
+                        $sval = "Array";
+                    }
+		    echo $sym->getType() . " (" . $sval . ") ";
 		}
 		echo ". ";
 		foreach ($cd as $sym) {
 		    echo $sym->getType() . " ";
 		}
-		echo "from " . $j . " (" . $val . ")<br>\n";
+		echo "from " . $j . " (" . $val . ") alive in " . $alive . "<br>\n";
 		if (count($state->getContainer()) != 0) {
-		    var_dump($state->getContainer());
+//		    var_dump($state->getContainer());
 		}
 	    }
 	}

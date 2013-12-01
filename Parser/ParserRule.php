@@ -11,7 +11,8 @@ class ParserRule
     private $precedence;
     private $assoc;  // left = 0, right = 1
     private $parser = null;
-
+    private $cache = array();
+    
     // $assoc: 0 = left, 1 = right
     public function __construct($symbol, array $rule, $prec = 0, $assoc = 0, $parser = null)
     {
@@ -25,6 +26,19 @@ class ParserRule
 	if($parser !== null) {
 	    $this->setParser($parser);
 	}
+        // Filling the cache
+        $rule = '';
+	foreach ($this->getRule() as $sym) {
+	    $rule .= $sym->__toString() . " ";
+	}
+        $this->cache['__toString'] = $this->getSymbol()->__toString() . ": " . $rule;
+	$rule = '';
+	foreach ($this->getRule() as $sym) {
+	    if ($sym instanceof ParserToken) {
+		$rule .= $sym->getType() . " ";
+	    }
+	}
+        $this->cache['toString'] = $this->getSymbol()->getType() . ": " . $rule;
     }
 
     protected function setParser(AbstractParser $parser)
@@ -100,25 +114,12 @@ class ParserRule
 
     public function __toString()
     {
-	$rule = '';
-	foreach ($this->getRule() as $sym) {
-	    $rule .= $sym->__toString() . " ";
-	}
-	return $this->getSymbol()->__toString() . ": " . $rule;
+        return $this->cache['__toString'];
     }
 
     public function toString()
     {
-	$rule = '';
-	foreach ($this->getRule() as $sym) {
-	    if ($sym instanceof ParserToken) {
-		$rule .= $sym->getType() . " ";
-	    }
-	}
-
-
-	return $this->getSymbol()->getType() . ": "
-	    . $rule;
+        return $this->cache['toString'];
     }
 
 }
