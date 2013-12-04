@@ -115,13 +115,13 @@ class ParserChart
             $newChart = array();
             //$this->reductionTable[$i] = array();
             foreach ($this->chart[$i] as $state) {
-                if ($state->getAliveInChart() >= $index) {
+                if ($state->aliveInChart >= $index) {
                     $newChart[] = $state;
                     // building the reduction table
                     //$this->addToReductionTable($i, $state);
                 } else {
                     // removing from reduction table
-                    $rt = $state->getReductionTableKey();
+                    $rt = $state->reductionTableKey;
                     unset($this->reductionTable[$i][$rt[0]][$rt[1]]);
                 }
             }

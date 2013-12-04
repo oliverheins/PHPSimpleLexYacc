@@ -64,7 +64,7 @@ class ParserState
      * @var array   array(symbolname, key)
      * @see ParserState::setReductionTableKey(), ParserState::getReductionTableKey()
      */
-    private $reductionTableKey;
+    public $reductionTableKey;
     
     /** holds a link to the reduction method
      * 
@@ -125,7 +125,7 @@ class ParserState
      * @var int
      * @see ParserState::setAliveInChart(), ParserState::getAliveInChart()
      */
-    private $aliveInChart = 0;
+    public $aliveInChart = 0;
     
     /** Constructor
      * 
@@ -157,11 +157,10 @@ class ParserState
         $this->chartNr = $chartNr;
 	if ($rule !== null) {
             $this->rule = $rule;
-	    $this->setRule($rule);
 	}
         $this->container = $container;
         if ($predecessor !== null) {
-            $this->addPredecessor($predecessor);
+            $this->predecessors[] = $predecessor;
             if ($chartNr !== null) {
                 $this->setAliveInChart($chartNr);
             }
@@ -431,9 +430,9 @@ class ParserState
      */
     private function copyArray(array $array)
     {
-	if ($array === null) {
-	    return null;
-	}
+//	if ($array === null) {
+//	    return null;
+//	}
 	$new = array();
 	return array_merge($new, $array);
     }

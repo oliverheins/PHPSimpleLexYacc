@@ -1,5 +1,16 @@
 <?php
 
+$a = array(true, false, null);
+for ($i=0; $i<3; $i++) {
+    echo "isset: ";
+    echo isset($a[$i]) ? "true" : "false";
+    echo "<br>";
+    echo "ake: ";
+    echo array_key_exists($i, $a) ? "true" : "false";
+    echo "<br>";
+}
+exit();
+
 class MyArray extends \ArrayObject
 {
     public $container = array();
@@ -253,6 +264,13 @@ class TokenRules extends LexerBuilder
     }
 
 }
+
+$a = array(false, null);
+for ($i=0; $i<count($a); $i++) {
+    echo "<br>isset: " . isset($a[$i]) ? "true" : "false";
+    echo "<br>ake: " . array_key_exists($a[$i]) ? "true" : "false";
+}
+exit();
 
 $r = new TokenRules();
 $lexer = $r->getLexer("SimpleWikiLexer");
