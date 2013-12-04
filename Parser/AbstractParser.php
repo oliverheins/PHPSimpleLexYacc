@@ -102,13 +102,23 @@ abstract class AbstractParser
     protected function setGrammar(array $grammar)
     {
 	assert(count($grammar) > 0);
-//	foreach ($grammar as $rule) {
-//	    assert($rule instanceof ParserRule);
-//	}
+	foreach ($grammar as $rule) {
+	    assert($rule instanceof ParserRule);
+	}
 	$this->grammar = new ParserGrammar($grammar);
 	$this->start_rule = $grammar[0];
     }
 
+    /** Sets the complex points
+     * 
+     * A complex point is a rule, at which a symbol occurs only on rhs, not on 
+     * lhs.  At this point, not only reduction is possible, but also the removal
+     * of abiguousity.
+     * 
+     * @param array $complexPoints  list of complex points
+     * @return void
+     * @see AbstractParser::complex, AbstractParser::setComplexPoint()
+     */
     protected function setComplexPoints(array $complexPoints)
     {
 	$this->complex = array();
@@ -123,6 +133,17 @@ abstract class AbstractParser
 	}
     }
 
+    /** Sets a particular complex point
+     * 
+     * A complex point is a rule, at which a symbol occurs only on rhs, not on 
+     * lhs.  At this point, not only reduction is possible, but also the removal
+     * of abiguousity.
+     * 
+     * @param ParserRule $rule  A parser rule
+     * @param int $pos          the position on the rhs
+     * @return void
+     * @see AbstractParser::complex, AbstractParser::setComplexPoints()
+     */
     protected function setComplexPoint(ParserRule $rule, $pos)
     {
 	assert(is_int($pos));
@@ -133,6 +154,13 @@ abstract class AbstractParser
 	$this->complex[$str][$pos] = true;
     }
 
+    /** Returns if a rank is higher than another
+     * 
+     * @param array $one
+     * @param array $two
+     * @return boolean
+     * @throws \Exception
+     */
     protected function higherRank(array $one, array $two)
     {
 	for ($i = 0, $cone = count($one), $ctwo = count($two); $i < min($cone, $ctwo); $i++) {
@@ -168,6 +196,15 @@ abstract class AbstractParser
 	return false;
     }
 
+    /** Sorts out the lower ranked states of a list of states
+     * 
+     * From a given list of states, only the highest ranked survives.  The rest
+     * get sorted out.
+     * 
+     * @param array &$states
+     * @see AbstractParser::higherRank(), ParserState::getRank()
+     * @return void
+     */
     protected function applyRanking(array &$states)
     {
 	$ranking = array();
@@ -198,6 +235,12 @@ abstract class AbstractParser
 	$states = array($states[$bestI]);
     }
 
+    /** Internal method for removing ambiguous states
+     * 
+     * @param array $states
+     * @return void
+     * @see AbstractParser::removeAmbiguity(), AbstractParser::applyRanking()
+     */
     protected function _removeAmbiguity(array &$states)
     {
 	$table = array();
@@ -235,6 +278,15 @@ abstract class AbstractParser
 	$states = $remaining;
     }
 
+    /** Removes ambiguous states from a chart
+     * 
+     * Scans for amiguous states in a chart.  If any, ranking is applied to sort
+     * out the least interesting.
+     * 
+     * @param int $i
+     * @return void
+     * @see AbstractParser::_removeAmbiguity(), AbstractParser::hasAmbiguity()
+     */
     protected function removeAmbiguity($i)
     {
 	assert(is_int($i));
@@ -257,6 +309,15 @@ abstract class AbstractParser
 	$this->chart->set($i, array_merge($filtered, $interesting));
     }
 
+    /** Checks if the state is a potential ambiguous one
+     * 
+     * If the given state has a complex point at the last reduced symbol, it is
+     * considered to be ambiguous.
+     * 
+     * @param \PHPSimpleLexYacc\Parser\ParserState $state
+     * @return boolean
+     * @see AbstractParser::removeAmbiguity(), AbstractParser::complex
+     */
     protected function hasAmbiguity(ParserState $state)
     {
 	$rule = $state->getRule();
@@ -275,6 +336,11 @@ abstract class AbstractParser
 	return isset($this->complex[$rule][$pos]);
     }
 
+    /** Does the postponed shifting.
+     * 
+     * @param int $i   the chart number
+     * @see ParserState::getShifts(), ParserState::shift()
+     */
     protected function doShifts($i)
     {
 	assert(is_int($i));
@@ -285,6 +351,20 @@ abstract class AbstractParser
 	}
     }
 
+    /** The main parse function
+     * 
+     * Basically a chart is build from a start state, and ongoing from 
+     * subsequently doing the closure (i.e. generating potential next states),
+     * shifting (actual seeing if a potential next state fits with the next 
+     * input token) and reducing (i.e. putting the result of a finished rule 
+     * back to its origin rule).  Further on, some optimizations are done, 
+     * basically removing ambiguous states and garbage collection.  If 
+     * $debuglevel is set, the chart is printed.
+     * 
+     * @param array $tokens   The list of tokens to be parsed
+     * @return void
+     * @see ParserChart, ParserState, ParserState::closure(), ParserState::shift(), ParserState::reductions(), ParserChart::garbageCollection(), AbstractParser::removeAmbiguity(), AbstractParser::doShifts(), AbstractParser::getDebugLevel(), AbstractParser::printChart()
+     */
     public function parse(array $tokens)
     {
 	$tokens[] = "end_of_input_marker"; // TODO
@@ -381,19 +461,42 @@ abstract class AbstractParser
 
     }
     
+    /** Sets the debug level
+     * 
+     * 0: no debug output, 1: some debug output, 2: verbose debug output
+     * 
+     * @param int $level
+     * @return void
+     * @see AbstractParser::debuglevel, AbstractParser::getDebugLevel()
+     */
     protected function setDebugLevel($level)
     {
 	assert(is_int($level) and $level >= 0 and $level <= 2);
 	$this->debuglevel = $level;
     }
 
+    /** Returns the debug level
+     * 
+     * 0: no debug output, 1: some debug output, 2: verbose debug output
+     * 
+     * @return int
+     * @see AbstractParser::debuglevel, AbstractParser::setDebugLevel()
+     */
     protected function getDebugLevel()
     {
 	$debuglevel = $this->debuglevel;
-	assert(is_int($debuglevel) and $debuglevel >= 0 and $debuglevel <= 3);
+	assert(is_int($debuglevel) and $debuglevel >= 0 and $debuglevel <= 2);
 	return $debuglevel;
     }
 
+    /** Prints the chart
+     * 
+     * Stops at chartnr, so no empty charts are printed.
+     * 
+     * @param array $tokens
+     * @param int $chartnr
+     * @return void
+     */
     private function printChart($tokens, $chartnr)
     {
 	for ($n = 0, $count = count($tokens); $n < min($chartnr, $count); $n++) {

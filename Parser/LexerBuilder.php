@@ -133,6 +133,8 @@ abstract class LexerBuilder extends AbstractBuilder
     /** Wrapper function for the concrete creator
      *
      * Calls the concrete creator method
+     * 
+     * @param string $name  the name of the lexer (must be a valid classname)
      */
     protected function createBuild($name)
     {
